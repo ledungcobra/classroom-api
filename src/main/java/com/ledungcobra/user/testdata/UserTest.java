@@ -3,6 +3,7 @@ package com.ledungcobra.user.testdata;
 
 import com.ledungcobra.dto.user.login.LoginRequest;
 import com.ledungcobra.dto.user.register.RegisterUserDto;
+import com.ledungcobra.dto.user.update.UpdateProfileRequest;
 
 public class UserTest {
     public static final RegisterUserDto registerUserDto_Success = RegisterUserDto.builder()
@@ -28,6 +29,16 @@ public class UserTest {
     public static final LoginRequest loginRequest_Success = LoginRequest.builder()
             .username("tanhank2k")
             .password("Abcd1234")
+            .build();
+    public static final UpdateProfileRequest updateProfile_Success = UpdateProfileRequest.builder()
+            .currentUser("tanhank2k")
+            .personalEmail("test@gmail.com")
+            .profileImageUrl("http://test.img")
+            .personalPhoneNumber("0909990999")
+            .lastName("lastname")
+            .firstName("firstname")
+            .middleName("middlename")
+            .studentID("studentID")
             .build();
 
     public static final String TEST_EMAIL = "tanhanh2kocean@gmail.com";

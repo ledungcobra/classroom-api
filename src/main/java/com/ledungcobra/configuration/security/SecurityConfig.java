@@ -58,6 +58,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
     @Override
     protected void configure(HttpSecurity http) throws Exception {
         http.authorizeRequests()
+//                .mvcMatchers("/users/update").hasAnyRole("USER")
 //                .mvcMatchers("/api/**", "/auth/**")
                 .anyRequest()
                 .permitAll()
@@ -65,6 +66,11 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                 .cors().disable()
         ;
 
+//        oauth2Config(http);
+        http.addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
+    }
+
+    private void oauth2Config(HttpSecurity http) throws Exception {
         http.
                 oauth2Login()
                 .authorizationEndpoint()
@@ -88,7 +94,6 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                         log.error("Authorization error {}", e.getMessage());
                     }
                 });
-        http.addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
     }
 
     @Bean(BeanIds.AUTHENTICATION_MANAGER)
@@ -101,4 +106,5 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
     public JwtAuthenticationFilter jwtAuthenticationFilter() {
         return new JwtAuthenticationFilter();
     }
+
 }

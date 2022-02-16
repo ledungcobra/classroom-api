@@ -12,7 +12,7 @@ import java.io.Serializable;
 @Setter
 @Builder
 @AllArgsConstructor
-public class CommonResponse<T> implements Serializable {
+public class CommonResponse<T extends Serializable> implements Serializable {
 
     @Serial
     public static final long serializableVersionUID = 1L;
@@ -21,4 +21,5 @@ public class CommonResponse<T> implements Serializable {
     private EResponseResult result;
     private String message;
     private T content;
+
 }

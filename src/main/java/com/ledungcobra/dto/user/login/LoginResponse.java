@@ -4,10 +4,12 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 
+import java.io.Serializable;
+
 @Data
 @AllArgsConstructor
 @Builder
-public class LoginResponse {
+public class LoginResponse implements Serializable {
 
     private String fullName;
     private String email;

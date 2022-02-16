@@ -3,6 +3,7 @@ package com.ledungcobra.configuration.security.jwt;
 import com.ledungcobra.configuration.security.userdetails.AppUserDetailsService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -25,27 +26,31 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     @Autowired
     private AppUserDetailsService userDetailsService;
 
+    @Autowired
+    private AuthenticationManager authenticationManager;
+
     @Override
-    protected void doFilterInternal(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, FilterChain filterChain) throws ServletException, IOException {
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse httpServletResponse, FilterChain filterChain) throws ServletException, IOException {
 
         try {
-            String jwt = jwtUtils.getJwtFromRequest(httpServletRequest);
+            String jwt = jwtUtils.getJwtFromRequest(request);
 
             if (StringUtils.hasText(jwt) && jwtUtils.validateToken(jwt)) {
-                var userId = jwtUtils.getUserNameFromJwtToken(jwt);
-                UserDetails userDetails = userDetailsService.loadUserByUsername(userId);
+                var username = jwtUtils.getUserNameFromJwtToken(jwt);
+                UserDetails userDetails = userDetailsService.loadUserByUsername(username);
                 if (userDetails != null) {
-                    var authenticationToken = new UsernamePasswordAuthenticationToken(userDetails, userDetails.getPassword(), userDetails.getAuthorities());
-                    authenticationToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(httpServletRequest));
+                    var authenticationToken = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+                    authenticationToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+//                    var authentication = authenticationManager.authenticate(authenticationToken);
                     SecurityContextHolder.getContext().setAuthentication(authenticationToken);
                 } else {
                     log.warn("Not found user for authenticate from jwt");
                 }
             }
         } catch (Exception ex) {
-            log.error("Fai to authenticate user from jwt");
+            log.error("Fai to authenticate user from jwt {}",ex.getMessage());
         }
 
-        filterChain.doFilter(httpServletRequest, httpServletResponse);
+        filterChain.doFilter(request, httpServletResponse);
     }
 }

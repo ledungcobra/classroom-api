@@ -1,6 +1,7 @@
 package com.ledungcobra.user.service;
 
 import com.ledungcobra.dto.user.register.RegisterUserDto;
+import com.ledungcobra.dto.user.update.UpdateProfileRequest;
 import com.ledungcobra.user.entity.User;
 import com.ledungcobra.user.oauth2.CustomOAuth2User;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -15,4 +16,5 @@ public interface UserService {
 
     User processOAuthPostLogin(String email, CustomOAuth2User user);
 
+    User updateProfile(User user, UpdateProfileRequest data);
 }

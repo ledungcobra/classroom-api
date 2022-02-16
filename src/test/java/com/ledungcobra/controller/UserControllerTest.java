@@ -12,6 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -43,7 +44,7 @@ class UserControllerTest extends BaseTest {
 
     @Autowired
     UserService userService;
-    private static final String BASE_URL = "/api/users";
+    private static final String BASE_URL = "/users";
     @Value("${spring.security.jwt.expired-in-seconds}")
     private Integer EXPIRED_TIME_IN_SECONDS;
 
@@ -124,6 +125,58 @@ class UserControllerTest extends BaseTest {
         var isValid = jwtUtils.validateToken(token);
         Thread.sleep(EXPIRED_TIME_IN_SECONDS * 1000 - 500);
         assertThat(isValid).isTrue();
+    }
+
+    @Test
+    void testRegisterDuplicateEmailShouldFail() throws Exception {
+        MvcResult result = mockMvc.perform(post(buildUrl("/register")).contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(registerUserDto_Success))
+                )
+                .andExpect(status().isCreated())
+                .andDo(print()).andReturn();
+
+        var response = ((UserResponse) objectMapper.readValue(result.getResponse().getContentAsString(), new TypeReference<SingleResponse<UserResponse>>() {
+        }).getResult());
+        assertThat(response.getUsername()).isEqualTo(registerUserDto_Success.getUsername());
+
+        mockMvc.perform(post(buildUrl("/register")).contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(registerUserDto_Success))
+                )
+                .andExpect(status().is5xxServerError())
+                .andDo(print()).andReturn();
+
+    }
+
+    @Test
+    void updateProfileShould_ReturnBadRequest() throws Exception {
+        var result = mockMvc.perform(post(buildUrl("/update")).contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(updateProfile_Success))
+                )
+                .andExpect(status().isBadRequest())
+                .andDo(print()).andReturn();
+        var response = objectMapper.readValue(result.getResponse().getContentAsString(), new TypeReference<CommonResponse<UserResponse>>() {
+        });
+
+        var userUpdated = response.getContent();
+        assertThat(userUpdated).isNotNull();
+    }
+
+    @Test
+    void updateProfileShould_ReturnOk() throws Exception {
+        var user = userService.findByUsername("tanhank2k");
+        String token = jwtUtils.generateToken(new AppUserDetails(user));
+        var headers = new HttpHeaders();
+        headers.add("Authorization", String.format("Bearer %s", token));
+        var result = mockMvc.perform(post(buildUrl("/update")).contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(updateProfile_Success))
+                        .headers(headers)
+                ).andExpect(status().isOk())
+                .andDo(print()).andReturn();
+        var response = objectMapper.readValue(result.getResponse().getContentAsString(), new TypeReference<CommonResponse<UserResponse>>() {
+        });
+
+        var userUpdated = response.getContent();
+        assertThat(userUpdated).isNotNull();
     }
 
 }

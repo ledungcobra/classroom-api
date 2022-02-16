@@ -32,20 +32,19 @@ public class JwtUtils {
      * @return
      */
     public String generateToken(AppUserDetails userDetails) {
+
         Date now = new Date();
-
-        final String authorities = userDetails.getAuthorities().stream()
-                .map(GrantedAuthority::getAuthority)
-                .collect(Collectors.joining(","));
-
         Date expiryDate = new Date(now.getTime() + jwtExpiredInSeconds * 1000);
+        log.info("Expired time {}",expiryDate);
 
-        var authorityClaims = new HashMap<String, Object>();
-        authorityClaims.put("authorities", authorities);
+//        final String authorities = userDetails.getAuthorities().stream()
+//                .map(GrantedAuthority::getAuthority)
+//                .collect(Collectors.joining(","));
+//        var authorityClaims = new HashMap<String, Object>();
+//        authorityClaims.put("authorities", authorities);
 
         return Jwts.builder()
-                .setSubject(Long.toString(userDetails.getUserId()))
-                .setClaims(authorityClaims)
+                .setSubject(userDetails.getUsername())
                 .setIssuedAt(now)
                 .setExpiration(expiryDate)
                 .signWith(SignatureAlgorithm.HS512, JWT_SECRET)

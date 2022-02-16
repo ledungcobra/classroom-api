@@ -13,7 +13,7 @@ import org.springframework.web.context.WebApplicationContext;
 
 @SpringBootTest
 @ExtendWith(SpringExtension.class)
-@ActiveProfiles("test")
+@ActiveProfiles({"default","test"})
 public abstract class BaseTest {
 
     protected MockMvc mockMvc;

@@ -1,10 +1,8 @@
 package com.ledungcobra.user.service;
 
-import com.ledungcobra.common.EGender;
-import com.ledungcobra.common.ERoleAccount;
-import com.ledungcobra.common.EUserStatus;
-import com.ledungcobra.common.Provider;
+import com.ledungcobra.common.*;
 import com.ledungcobra.dto.user.register.RegisterUserDto;
+import com.ledungcobra.dto.user.update.UpdateProfileRequest;
 import com.ledungcobra.user.entity.AppRole;
 import com.ledungcobra.user.entity.User;
 import com.ledungcobra.user.oauth2.CustomOAuth2User;
@@ -12,6 +10,7 @@ import com.ledungcobra.user.repository.UserRepository;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import javax.persistence.EntityManager;
 
@@ -106,6 +105,20 @@ public class UserServiceImpl implements UserService {
             return userRepository.save(registerUser);
         }
         return foundUser;
+    }
+
+    @Override
+    public User updateProfile(User user, UpdateProfileRequest data) {
+
+        user.setPhoneNumber(StringUtils.hasText(data.getPhoneNumber()) ? data.getPhoneNumber() : user.getPhoneNumber());
+        user.setFirstName(StringUtils.hasText(data.getFirstName()) ? data.getFirstName() : user.getFirstName());
+        user.setMiddleName(StringUtils.hasText(data.getMiddleName()) ? data.getMiddleName() : user.getMiddleName());
+        user.setLastName(StringUtils.hasText(data.getLastName()) ? data.getLastName() : user.getLastName());
+        user.setPersonalEmail(StringUtils.hasText(data.getPersonalEmail()) ? data.getPersonalEmail() : user.getPersonalEmail());
+        user.setPersonalPhoneNumber(StringUtils.hasText(data.getPersonalPhoneNumber()) ? data.getPersonalPhoneNumber() : user.getPersonalPhoneNumber());
+        user.setStudentID(StringUtils.hasText(data.getStudentID()) ? data.getStudentID() : user.getStudentID());
+        user.setProfileImageUrl(StringUtils.hasText(data.getProfileImageUrl()) ? data.getProfileImageUrl(): user.getProfileImageUrl());
+        return userRepository.save(AuditUtils.updateAudit(user, user.getUserName()));
     }
 
 }
