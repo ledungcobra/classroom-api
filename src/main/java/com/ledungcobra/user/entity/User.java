@@ -2,10 +2,13 @@ package com.ledungcobra.user.entity;
 
 import com.ledungcobra.common.Audit;
 import com.ledungcobra.common.Provider;
+import com.ledungcobra.course.entity.Course;
 import lombok.*;
 
 import javax.persistence.*;
+import java.io.Serializable;
 import java.time.Instant;
+import java.util.List;
 
 @Setter
 @Getter
@@ -14,7 +17,7 @@ import java.time.Instant;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class User extends Audit {
+public class User extends Audit implements Serializable {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id", nullable = false)

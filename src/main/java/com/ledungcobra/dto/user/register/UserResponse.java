@@ -46,6 +46,6 @@ public class UserResponse implements Serializable {
         personalPhoneNumber = data.getPersonalPhoneNumber();
         userStatus = EUserStatus.from(data.getUserStatus());
         createOn = data.getCreateOn();
-        fullname = data.getNormalizedUserName();
+        fullname = String.format("%s %s %s", firstName, middleName, lastName);
     }
 }

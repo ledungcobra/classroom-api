@@ -17,4 +17,8 @@ public interface UserService {
     User processOAuthPostLogin(String email, CustomOAuth2User user);
 
     User updateProfile(User user, UpdateProfileRequest data);
+
+    void update(User user);
+
+    User findByStudentCode(String studentCode);
 }

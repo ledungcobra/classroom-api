@@ -3,7 +3,6 @@ package com.ledungcobra.configuration.security.jwt;
 import com.ledungcobra.configuration.security.userdetails.AppUserDetailsService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -26,8 +25,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     @Autowired
     private AppUserDetailsService userDetailsService;
 
-    @Autowired
-    private AuthenticationManager authenticationManager;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse httpServletResponse, FilterChain filterChain) throws ServletException, IOException {
@@ -41,7 +38,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 if (userDetails != null) {
                     var authenticationToken = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
                     authenticationToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-//                    var authentication = authenticationManager.authenticate(authenticationToken);
                     SecurityContextHolder.getContext().setAuthentication(authenticationToken);
                 } else {
                     log.warn("Not found user for authenticate from jwt");

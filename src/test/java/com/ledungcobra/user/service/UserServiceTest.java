@@ -19,9 +19,13 @@ import static org.assertj.core.api.Assertions.*;
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @ActiveProfiles("test")
 @FlywayTest
-@ComponentScan(basePackages = {"com.ledungcobra.user",
+@ComponentScan(basePackages = {
+        "com.ledungcobra.user",
         "com.ledungcobra.configuration.beans",
-        "com.ledungcobra.course", "com.ledungcobra.common", "com.ledungcobra.configuration.database"})
+        "com.ledungcobra.course",
+        "com.ledungcobra.common",
+        "com.ledungcobra.configuration.database"
+})
 class UserServiceTest {
 
     @Autowired
@@ -58,11 +62,11 @@ class UserServiceTest {
     }
 
     @Test
-    void updateUserProfileShouldSuccess(){
+    void updateUserProfileShouldSuccess() {
 
         var testUserName = "tanhank2k";
         var user = userService.findByUsername(testUserName);
-        userService.updateProfile(user,updateProfile_Success);
+        userService.updateProfile(user, updateProfile_Success);
         var userUpdated = userService.findByUsername(testUserName);
 
         assertThat(userUpdated).isNotNull();
@@ -73,7 +77,17 @@ class UserServiceTest {
         assertThat(userUpdated.getLastName()).isEqualTo(updateProfile_Success.getLastName());
         assertThat(userUpdated.getStudentID()).isEqualTo(updateProfile_Success.getStudentID());
         assertThat(userUpdated.getProfileImageUrl()).isEqualTo(updateProfile_Success.getProfileImageUrl());
+    }
 
+    @Test
+    void updateShouldSuccess() {
+        var newPassword = "myNewPassword@01";
+        var user = userService.findByUsername("tanhank2k");
+        var newHashedPassword = passwordEncoder.encode(newPassword);
+        user.setPasswordHash(newHashedPassword);
+        userService.update(user);
+        var foundUser = userService.findByUsername("tanhank2k");
+        assertThat(foundUser.getPasswordHash()).isEqualTo(newHashedPassword);
     }
 
 }

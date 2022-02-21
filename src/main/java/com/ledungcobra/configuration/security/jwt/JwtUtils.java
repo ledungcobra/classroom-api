@@ -1,17 +1,18 @@
 package com.ledungcobra.configuration.security.jwt;
 
 import com.ledungcobra.configuration.security.userdetails.AppUserDetails;
+import com.ledungcobra.user.service.UserService;
 import io.jsonwebtoken.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.security.core.GrantedAuthority;
+import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
+import javax.servlet.FilterChain;
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import java.util.Date;
-import java.util.HashMap;
-import java.util.stream.Collectors;
 
 @Component
 @Slf4j
@@ -25,6 +26,12 @@ public class JwtUtils {
     @Value("${spring.security.jwt.expired-in-seconds}")
     private Integer jwtExpiredInSeconds;
 
+    private final UserService userService;
+
+    public JwtUtils(UserService userService) {
+        this.userService = userService;
+    }
+
     /**
      * Generate jwt token for user
      *
@@ -35,13 +42,7 @@ public class JwtUtils {
 
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + jwtExpiredInSeconds * 1000);
-        log.info("Expired time {}",expiryDate);
-
-//        final String authorities = userDetails.getAuthorities().stream()
-//                .map(GrantedAuthority::getAuthority)
-//                .collect(Collectors.joining(","));
-//        var authorityClaims = new HashMap<String, Object>();
-//        authorityClaims.put("authorities", authorities);
+        log.info("Expired time {}", expiryDate);
 
         return Jwts.builder()
                 .setSubject(userDetails.getUsername())
@@ -94,6 +95,28 @@ public class JwtUtils {
             return bearerToken.substring(7);
         }
         return null;
+    }
+
+    /**
+     * Call this method when request come to controller
+     * Authorization header from request is validated by @see {@link com.ledungcobra.configuration.security.jwt.JwtAuthenticationFilter#doFilterInternal(HttpServletRequest, HttpServletResponse, FilterChain)}
+     *
+     * @param request
+     * @return
+     */
+    public String getUserNameFromRequest(HttpServletRequest request) {
+        var token = getJwtFromRequest(request);
+        return getUserNameFromJwtToken(token);
+    }
+
+    public HttpHeaders buildAuthorizationHeader(String username) {
+        var headers = new HttpHeaders();
+        if (username == null) return headers;
+        var user = userService.findByUsername(username);
+        String token = generateToken(new AppUserDetails(user));
+        if (token == null) return headers;
+        headers.add("Authorization", String.format("Bearer %s", token));
+        return headers;
     }
 
 }

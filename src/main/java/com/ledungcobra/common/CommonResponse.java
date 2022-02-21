@@ -22,4 +22,11 @@ public class CommonResponse<T extends Serializable> implements Serializable {
     private String message;
     private T content;
 
+    public int getStatus() {
+        return status.getValue();
+    }
+
+    public int getResult() {
+        return result.getValue();
+    }
 }

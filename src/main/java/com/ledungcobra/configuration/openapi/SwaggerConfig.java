@@ -23,7 +23,7 @@ public class SwaggerConfig {
                 .securityContexts(List.of(securityContext()))
                 .select()
                 .apis(RequestHandlerSelectors.any())
-                .paths(PathSelectors.ant("/api/**"))
+                .paths(PathSelectors.ant("/**"))
                 .build();
     }
 

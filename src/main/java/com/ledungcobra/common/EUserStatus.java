@@ -1,5 +1,7 @@
 package com.ledungcobra.common;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 public enum EUserStatus {
     NotSpecified(0),
     Active(1),
@@ -13,6 +15,7 @@ public enum EUserStatus {
         this.value = val;
     }
 
+    @JsonProperty
     public int getValue() {
         return value;
     }

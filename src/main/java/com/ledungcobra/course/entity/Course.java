@@ -1,6 +1,7 @@
 package com.ledungcobra.course.entity;
 
 import com.ledungcobra.common.Audit;
+import com.ledungcobra.user.entity.User;
 import lombok.*;
 
 import javax.persistence.*;
@@ -52,5 +53,8 @@ public class Course extends Audit {
             inverseJoinColumns = @JoinColumn(name = "studentid"))
     private List<Student> students;
 
-
+    @ManyToMany
+    @JoinTable(name = "courseuser", joinColumns = @JoinColumn(name = "courseid"),
+            inverseJoinColumns = @JoinColumn(name = "userid"))
+    private List<User> users;
 }

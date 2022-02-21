@@ -1,5 +1,7 @@
 package com.ledungcobra.common;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 public enum ERole {
     None(0),
     Teacher(1),
@@ -11,6 +13,7 @@ public enum ERole {
         this.role = role;
     }
 
+    @JsonProperty
     public int getRole() {
         return role;
     }

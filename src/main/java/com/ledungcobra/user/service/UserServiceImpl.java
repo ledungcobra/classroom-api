@@ -117,8 +117,18 @@ public class UserServiceImpl implements UserService {
         user.setPersonalEmail(StringUtils.hasText(data.getPersonalEmail()) ? data.getPersonalEmail() : user.getPersonalEmail());
         user.setPersonalPhoneNumber(StringUtils.hasText(data.getPersonalPhoneNumber()) ? data.getPersonalPhoneNumber() : user.getPersonalPhoneNumber());
         user.setStudentID(StringUtils.hasText(data.getStudentID()) ? data.getStudentID() : user.getStudentID());
-        user.setProfileImageUrl(StringUtils.hasText(data.getProfileImageUrl()) ? data.getProfileImageUrl(): user.getProfileImageUrl());
+        user.setProfileImageUrl(StringUtils.hasText(data.getProfileImageUrl()) ? data.getProfileImageUrl() : user.getProfileImageUrl());
         return userRepository.save(AuditUtils.updateAudit(user, user.getUserName()));
+    }
+
+    @Override
+    public void update(User user) {
+        userRepository.save(user);
+    }
+
+    @Override
+    public User findByStudentCode(String studentCode) {
+        return userRepository.findByStudentID(studentCode);
     }
 
 }

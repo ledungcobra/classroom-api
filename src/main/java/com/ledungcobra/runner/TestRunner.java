@@ -7,7 +7,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.PropertySource;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.stereotype.Component;
 
@@ -28,6 +27,6 @@ public class TestRunner implements CommandLineRunner {
         log.error("Email is {}", email);
         AppUserDetails user = (AppUserDetails) userDetailsService.loadUserByUsername("tanhank2k");
         String token = jwtUtils.generateToken(user);
-        log.info(String.format("JWT TOKEN %s", token));
+        log.info(String.format("Bearer %s", token));
     }
 }

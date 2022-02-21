@@ -1,5 +1,7 @@
 package com.ledungcobra.common;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 public enum ERoleAccount {
 
     Admin(1), User(0);
@@ -9,6 +11,7 @@ public enum ERoleAccount {
         this.value = val;
     }
 
+    @JsonProperty
     public int getValue() {
         return value;
     }

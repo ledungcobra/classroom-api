@@ -1,5 +1,7 @@
 package com.ledungcobra.common;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 public enum EGender {
     None(0),
     Male(1),
