@@ -3,13 +3,13 @@ package com.ledungcobra.common;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-public enum EApiStatus {
+public enum EStatus {
     Success(200),
     Error(400);
 
     private final int value;
 
-    EApiStatus(int value) {
+    EStatus(int value) {
         this.value = value;
     }
 
@@ -19,7 +19,7 @@ public enum EApiStatus {
     }
 
     @JsonCreator
-    public static EApiStatus fromInt(int val) {
+    public static EStatus fromInt(int val) {
         return switch (val) {
             case 200 -> Success;
             case 400 -> Error;

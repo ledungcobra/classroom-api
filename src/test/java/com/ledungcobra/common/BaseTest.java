@@ -23,7 +23,6 @@ public abstract class BaseTest {
 
     @BeforeEach
     protected void setUp() {
-
         this.mockMvc = MockMvcBuilders.webAppContextSetup(context)
                 .apply(SecurityMockMvcConfigurers.springSecurity())
                 .build();

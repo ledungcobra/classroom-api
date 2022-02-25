@@ -30,16 +30,14 @@ public class EmailServiceImpl implements EmailService {
 
     @Override
     public void sendMail(
-            String to, String subject, String buttonTitle, String path,
-            String title, String contentStr) {
+            String to, String subject, String buttonTitle, String path, String contentStr) {
         MimeMessagePreparator messagePreparator = mimeMessage -> {
             MimeMessageHelper messageHelper = new MimeMessageHelper(mimeMessage);
             messageHelper.setFrom(from);
             messageHelper.setTo(to);
             messageHelper.setSubject(subject);
-            String content = mailContentBuilder.build(buttonTitle, path, title, contentStr);
+            String content = mailContentBuilder.build(buttonTitle, path, subject, contentStr);
             messageHelper.setText(content, true);
-
         };
         try {
             emailSender.send(messagePreparator);

@@ -28,17 +28,4 @@ public class Audit {
 
     @Column(name = "updateon")
     protected Instant updateOn;
-
-//    @PrePersist
-//    public void preSave() {
-//        createOn = Instant.now();
-//        updateOn = createOn;
-//        updateBy = "";
-//    }
-//
-//    @PreUpdate
-//    public void preUpdate() {
-//        updateOn = Instant.now();
-//    }
-
 }

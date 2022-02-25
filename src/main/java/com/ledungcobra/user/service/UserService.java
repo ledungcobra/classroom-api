@@ -21,4 +21,10 @@ public interface UserService {
     void update(User user);
 
     User findByStudentCode(String studentCode);
+
+    User findByEmail(String email);
+
+    boolean confirmEmail(User user, String token);
+
+    boolean resetPassword(User user, String token, String defaultPassword);
 }

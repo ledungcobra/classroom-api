@@ -8,7 +8,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
 @SpringBootTest
-@ActiveProfiles({"default","test"})
+@ActiveProfiles({"default", "test"})
 @Transactional
 class EmailServiceTest {
 
@@ -17,6 +17,6 @@ class EmailServiceTest {
 
     @Test
     void sendMail() {
-        emailService.sendMail("ledungcobra@gmail.com","Hello","Confirm password", "","Title","Content");
+        emailService.sendMail("ledungcobra@gmail.com", "Hello", "Confirm password", "", "Content");
     }
 }

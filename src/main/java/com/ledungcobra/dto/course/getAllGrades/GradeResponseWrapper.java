@@ -1,6 +1,6 @@
 package com.ledungcobra.dto.course.getAllGrades;
 
-import com.ledungcobra.dto.getAssignmentsOfCourse.AssignmentResponse;
+import com.ledungcobra.dto.course.getAssignmentsOfCourse.AssignmentResponse;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;

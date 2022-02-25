@@ -11,8 +11,10 @@ import com.ledungcobra.dto.user.login.LoginResponse;
 import com.ledungcobra.dto.user.register.RegisterUserDto;
 import com.ledungcobra.dto.user.register.UserResponse;
 import com.ledungcobra.dto.user.update.UpdateProfileRequest;
+import com.ledungcobra.mail.EmailService;
 import com.ledungcobra.user.entity.User;
 import com.ledungcobra.user.service.UserService;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.annotation.Secured;
@@ -25,6 +27,7 @@ import org.springframework.util.StringUtils;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.ObjectError;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.validation.Valid;
@@ -43,16 +46,21 @@ public class UserController {
     public static final String ACCOUNT_ALREADY_TAKEN_MSG = "Tài khoản đã có người đăng kí";
     public static final String LOGIN_SUCCESS_MSG = "Đăng nhập thành công";
 
+    @Value("${server.port}")
+    private String serverPort;
+
     private final UserService userService;
     private final AuthenticationManager authenticationManager;
     private final JwtUtils jwtUtils;
     private final PasswordEncoder passwordEncoder;
+    private final EmailService emailService;
 
-    public UserController(UserService userService, AuthenticationManager authenticationManager, JwtUtils jwtUtils, PasswordEncoder passwordEncoder) {
+    public UserController(UserService userService, AuthenticationManager authenticationManager, JwtUtils jwtUtils, PasswordEncoder passwordEncoder, EmailService emailService) {
         this.userService = userService;
         this.authenticationManager = authenticationManager;
         this.jwtUtils = jwtUtils;
         this.passwordEncoder = passwordEncoder;
+        this.emailService = emailService;
     }
 
     @PostMapping(value = "/register", produces = "application/json")
@@ -65,13 +73,15 @@ public class UserController {
                     .build());
         } else {
             var user = userService.register(registerDto);
-
-            // :TODO Implement mail service
+            final String SERVER_URL = ServletUriComponentsBuilder.fromCurrentContextPath().build().toUriString() +
+                                            (!"80".equals(serverPort) && !"443".equals(serverPort) ? serverPort : "");
+            var token = jwtUtils.generateToken(new AppUserDetails(user));
+            var confirmationLink = SERVER_URL + "/Email/ConfirmEmail?token=" + token + "&email=" + user.getEmail();
+            emailService.sendMail(registerDto.getEmail(), "Xác nhận tài khoản", "Xác nhận", confirmationLink, "Nhấn vào link để kích hoạt tài khoản");
             var resp = SingleResponse.builder()
                     .result(new UserResponse(user))
                     .build();
-
-            return ResponseEntity.created(URI.create("/api/users/registers/"))
+            return ResponseEntity.created(URI.create("/users/registers/"))
                     .body(resp);
         }
     }
@@ -82,8 +92,8 @@ public class UserController {
         if (bindingResult.hasErrors()) {
             return ResponseEntity.badRequest().body(
                     CommonResponse.builder()
-                            .status(EApiStatus.Error)
-                            .result(EResponseResult.Error)
+                            .status(EStatus.Error)
+                            .result(EResult.Error)
                             .content(String.join(",",
                                     bindingResult.getAllErrors().stream().map(ObjectError::toString)
                                             .collect(Collectors.toSet())))
@@ -100,8 +110,8 @@ public class UserController {
             };
 
             return ResponseEntity.ok(CommonResponse.builder()
-                    .result(EResponseResult.Successful)
-                    .status(EApiStatus.Success)
+                    .result(EResult.Successful)
+                    .status(EStatus.Success)
                     .content(LoginResponse.builder()
                             .email(user.getEmail())
                             .id(user.getId())
@@ -139,8 +149,8 @@ public class UserController {
             return ResponseEntity.badRequest()
                     .body(CommonResponse.builder()
                             .message("Bạn không thể đổi thông tin của người dùng khác")
-                            .status(EApiStatus.Error)
-                            .result(EResponseResult.Error)
+                            .status(EStatus.Error)
+                            .result(EResult.Error)
                             .content("")
                             .build());
         }
@@ -148,16 +158,16 @@ public class UserController {
         var user = userService.findByUsername(request.getCurrentUser());
         if (user == null) {
             return new ResponseEntity<>(CommonResponse.<String>builder()
-                    .status(EApiStatus.Error)
-                    .result(EResponseResult.Error)
+                    .status(EStatus.Error)
+                    .result(EResult.Error)
                     .content("")
                     .message("Không tìm được user")
                     .build(), HttpStatus.NOT_FOUND);
         }
         User updated = userService.updateProfile(user, request);
         return ResponseEntity.ok(CommonResponse.builder()
-                .status(EApiStatus.Success)
-                .result(EResponseResult.Successful)
+                .status(EStatus.Success)
+                .result(EResult.Successful)
                 .content(new UserResponse(updated))
                 .message("Cập nhật thông tin thành công")
                 .build());
@@ -176,16 +186,16 @@ public class UserController {
             return ResponseEntity.badRequest().body(CommonResponse.builder()
                     .message("Mật khẩu không khớp")
                     .content("")
-                    .result(EResponseResult.Error)
-                    .status(EApiStatus.Error)
+                    .result(EResult.Error)
+                    .status(EStatus.Error)
                     .build());
         }
 
         if (!StringUtils.hasText(request.getNewPassword()) ||
                 request.getNewPassword().length() < 8) {
             return ResponseEntity.badRequest().body(CommonResponse.builder()
-                    .status(EApiStatus.Error)
-                    .result(EResponseResult.Error)
+                    .status(EStatus.Error)
+                    .result(EResult.Error)
                     .content("")
                     .message("Mật khẩu không hợp lệ")
                     .build());
@@ -196,8 +206,8 @@ public class UserController {
         user.setPasswordHash(hashedNewPassword);
         userService.update(user);
         return ResponseEntity.ok(CommonResponse.builder()
-                .status(EApiStatus.Success)
-                .result(EResponseResult.Successful)
+                .status(EStatus.Success)
+                .result(EResult.Successful)
                 .message("Cập nhật mật khẩu thành công")
                 .content("")
                 .build());
@@ -213,14 +223,14 @@ public class UserController {
             return new ResponseEntity<>(CommonResponse.builder()
                     .message("Không tìm được user")
                     .content("")
-                    .result(EResponseResult.Error)
-                    .status(EApiStatus.Error)
+                    .result(EResult.Error)
+                    .status(EStatus.Error)
                     .build(), HttpStatus.NOT_FOUND);
         }
 
         return ResponseEntity.ok(CommonResponse.builder()
-                .status(EApiStatus.Success)
-                .result(EResponseResult.Successful)
+                .status(EStatus.Success)
+                .result(EResult.Successful)
                 .content(new UserResponse(user))
                 .message("")
                 .build());
@@ -233,15 +243,15 @@ public class UserController {
         if (foundStudent == null) {
             return new ResponseEntity<>(CommonResponse.builder()
                     .content("")
-                    .status(EApiStatus.Error)
-                    .result(EResponseResult.Error)
+                    .status(EStatus.Error)
+                    .result(EResult.Error)
                     .message(String.format("Không tìm được học sinh với id: %s", studentCode))
                     .build(), HttpStatus.NOT_FOUND);
         }
 
         return ResponseEntity.ok(CommonResponse.builder()
-                .status(EApiStatus.Success)
-                .result(EResponseResult.Successful)
+                .status(EStatus.Success)
+                .result(EResult.Successful)
                 .content(new UserSimpleResponse(foundStudent))
                 .build());
     }

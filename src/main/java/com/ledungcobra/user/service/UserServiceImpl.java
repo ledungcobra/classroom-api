@@ -1,34 +1,38 @@
 package com.ledungcobra.user.service;
 
 import com.ledungcobra.common.*;
+import com.ledungcobra.configuration.security.jwt.JwtUtils;
 import com.ledungcobra.dto.user.register.RegisterUserDto;
 import com.ledungcobra.dto.user.update.UpdateProfileRequest;
 import com.ledungcobra.user.entity.AppRole;
 import com.ledungcobra.user.entity.User;
 import com.ledungcobra.user.oauth2.CustomOAuth2User;
 import com.ledungcobra.user.repository.UserRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import javax.persistence.EntityManager;
-
+import java.util.Objects;
 import java.util.UUID;
 
 import static com.ledungcobra.common.AuditUtils.createAudit;
 
 @Service
+@RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final EntityManager entityManager;
+    private  JwtUtils jwtUtils;
 
-    public UserServiceImpl(UserRepository userRepository, PasswordEncoder passwordEncoder, EntityManager entityManager) {
-        this.userRepository = userRepository;
-        this.passwordEncoder = passwordEncoder;
-        this.entityManager = entityManager;
+    @Autowired
+    public void setJwtUtils(JwtUtils jwtUtils) {
+        this.jwtUtils = jwtUtils;
     }
 
     @Override
@@ -129,6 +133,43 @@ public class UserServiceImpl implements UserService {
     @Override
     public User findByStudentCode(String studentCode) {
         return userRepository.findByStudentID(studentCode);
+    }
+
+    @Override
+    public User findByEmail(String email) {
+        return userRepository.findByEmail(email);
+    }
+
+    private boolean validateToken(User user, String token) {
+        return jwtUtils.validateToken(token) &&
+                Objects.equals(user.getUserName(), jwtUtils.getUserNameFromJwtToken(token));
+    }
+
+
+    @Override
+    public boolean confirmEmail(User user, String token) {
+        try {
+            if (validateToken(user, token)) {
+                user.setEmailConfirmed((byte) 1);
+                user.setUserStatus(EUserStatus.Active.getValue());
+                userRepository.save(user);
+                return true;
+            } else {
+                return false;
+            }
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    @Override
+    public boolean resetPassword(User user, String token, String defaultPassword) {
+        if (validateToken(user, token)) {
+            user.setPasswordHash(passwordEncoder.encode(defaultPassword));
+            userRepository.save(user);
+            return true;
+        }
+        return false;
     }
 
 }

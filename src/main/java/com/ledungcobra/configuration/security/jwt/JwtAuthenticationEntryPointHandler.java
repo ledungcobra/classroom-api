@@ -1,9 +1,9 @@
 package com.ledungcobra.configuration.security.jwt;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.ledungcobra.common.EApiStatus;
+import com.ledungcobra.common.EStatus;
 import com.ledungcobra.common.CommonResponse;
-import com.ledungcobra.common.EResponseResult;
+import com.ledungcobra.common.EResult;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.AuthenticationException;
@@ -30,8 +30,8 @@ public class JwtAuthenticationEntryPointHandler implements AuthenticationEntryPo
         var url = httpServletRequest.getHeader("Referer");
         httpServletResponse.getWriter().write(mapper.writeValueAsString(CommonResponse.builder()
                 .message("Unauthorized")
-                .status(EApiStatus.Success)
-                .result(EResponseResult.Successful)
+                .status(EStatus.Success)
+                .result(EResult.Successful)
                 .content(url + " được bảo vệ bạn không có quyền truy cập")
                 .build()));
     }

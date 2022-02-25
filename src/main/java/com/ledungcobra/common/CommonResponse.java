@@ -17,8 +17,8 @@ public class CommonResponse<T extends Serializable> implements Serializable {
     @Serial
     public static final long serializableVersionUID = 1L;
 
-    private EApiStatus status;
-    private EResponseResult result;
+    private EStatus status;
+    private EResult result;
     private String message;
     private T content;
 

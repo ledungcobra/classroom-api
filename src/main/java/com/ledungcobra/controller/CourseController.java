@@ -30,8 +30,8 @@ import com.ledungcobra.dto.course.removeMember.RemoveMemberInCourseRequest;
 import com.ledungcobra.dto.course.updateAssigment.UpdateAssignmentsRequest;
 import com.ledungcobra.dto.course.updateRoleMember.UpdateRoleMemberInCourseRequest;
 import com.ledungcobra.dto.email.postSendMail.SendMailJoinToCourseRequest;
-import com.ledungcobra.dto.getAssignmentsOfCourse.AssignmentResponse;
-import com.ledungcobra.dto.getAssignmentsOfCourse.AssignmentWrapper;
+import com.ledungcobra.dto.course.getAssignmentsOfCourse.AssignmentResponse;
+import com.ledungcobra.dto.course.getAssignmentsOfCourse.AssignmentWrapper;
 import com.ledungcobra.exception.NotFoundException;
 import com.ledungcobra.mail.EmailService;
 import com.ledungcobra.user.service.UserService;
@@ -69,6 +69,8 @@ import static org.springframework.http.ResponseEntity.ok;
 @RequiredArgsConstructor
 public class CourseController {
 
+    public static final String CONTENT_DISPOSITION = "Content-Disposition";
+    public static final String NOT_FOUND_COURSE_MSG = "Not found course";
     private final JwtUtils jwtUtils;
     private final CourseService courseService;
     private final UserService userService;
@@ -91,7 +93,7 @@ public class CourseController {
         var index = (long) startAt + (long) maxResults;
         var count = courseService.countByOwner(username);
         var courses = courseService.getCoursesByTitleLike(title, PageableBuilder.getPageable(startAt, maxResults, sortColumn), username);
-        return ok().body(CommonResponse.builder().content(CourseWrapper.builder().hasMore(index < count).data(courses.stream().map(CourseResponse::new).toList()).total(count).build()).result(EResponseResult.Successful).status(EApiStatus.Success).message("Lấy dữ liệu khoá học thành công").build());
+        return ok().body(CommonResponse.builder().content(CourseWrapper.builder().hasMore(index < count).data(courses.stream().map(CourseResponse::new).toList()).total(count).build()).result(EResult.Successful).status(EStatus.Success).message("Lấy dữ liệu khoá học thành công").build());
     }
 
     @PostMapping(value = "", produces = "application/json")
@@ -102,11 +104,11 @@ public class CourseController {
         }
         request.setCurrentUser(currentUser);
         var createdCourse = courseService.createCourse(request);
-        return ok(CommonResponse.builder().status(EApiStatus.Success).result(EResponseResult.Successful).content(new CourseResponse(createdCourse)).message("Tạo lớp học thành công").build());
+        return ok(CommonResponse.builder().status(EStatus.Success).result(EResult.Successful).content(new CourseResponse(createdCourse)).message("Tạo lớp học thành công").build());
     }
 
     private ResponseEntity<?> getNotFoundCurrentUser() {
-        return ResponseEntity.badRequest().body(CommonResponse.builder().result(EResponseResult.Error).status(EApiStatus.Error).content("").message("Không tìm thấy user").build());
+        return ResponseEntity.badRequest().body(CommonResponse.builder().result(EResult.Error).status(EStatus.Error).content("").message("Không tìm thấy user").build());
     }
 
     @GetMapping("/{id}")
@@ -115,13 +117,22 @@ public class CourseController {
         if (currentUser == null) return getNotFoundCurrentUser();
         Course foundCourse = courseService.findCourseById(currentUser, id);
         if (foundCourse == null)
-            return new ResponseEntity<>(CommonResponse.builder().status(EApiStatus.Error).result(EResponseResult.Error).message("Class not found").content("").build(), HttpStatus.NOT_FOUND);
-        return ok(CommonResponse.builder().status(EApiStatus.Success).result(EResponseResult.Successful).message("Get course success").content(new CourseResponse(foundCourse)).build());
+            return new ResponseEntity<>(CommonResponse.builder().status(EStatus.Error).result(EResult.Error).message("Class not found").content("").build(), HttpStatus.NOT_FOUND);
+        return ok(CommonResponse.builder().status(EStatus.Success).result(EResult.Successful).message("Get course success").content(new CourseResponse(foundCourse)).build());
     }
 
     @GetMapping(value = "/{id}/assignments", produces = "application/json")
     public ResponseEntity<?> getAssignmentsOfCourse(HttpServletRequest httpRequest, @PathVariable("id") Integer courseId, @RequestParam(value = "Name", required = false) String name, @RequestParam(value = "StartAt", required = false) Integer startAt, @RequestParam(value = "MaxResults", required = false) Integer maxResults, @RequestParam(value = "SortColumn", required = false) String sortColumn) {
         var currentUser = jwtUtils.getUserNameFromRequest(httpRequest);
+        if (!validateUserInClass(currentUser, courseId, ERole.None, false)) {
+            return ok(CommonResponse.builder()
+                    .status(EStatus.Error)
+                    .result(EResult.Error)
+                    .content("")
+                    .message("Permission denied!!")
+                    .build());
+        }
+
         name = name == null ? "%%" : "%" + name + "%";
         startAt = startAt == null ? 0 : startAt;
         maxResults = maxResults == null ? Integer.MAX_VALUE : maxResults;
@@ -129,7 +140,7 @@ public class CourseController {
         List<Assignment> assignments = courseService.findAssignmentOfsCourseLikeName(currentUser, courseId, name, PageableBuilder.getPageable(startAt, maxResults, sortColumn));
         var total = courseService.findCourseById("tanhank2k", courseId).getAssignments().size();
         var index = startAt + maxResults;
-        return ok(CommonResponse.builder().message("Get assigment successfully").status(EApiStatus.Success).result(EResponseResult.Successful).content(AssignmentWrapper.builder().total(total).hasMore(index < total).data(assignments.stream().map(AssignmentResponse::new).toList()).build()).build());
+        return ok(CommonResponse.builder().message("Get assigment successfully").status(EStatus.Success).result(EResult.Successful).content(AssignmentWrapper.builder().total(total).hasMore(index < total).data(assignments.stream().map(AssignmentResponse::new).toList()).build()).build());
     }
 
     // TODO TESTING
@@ -141,18 +152,18 @@ public class CourseController {
 
         if (!validateUserInClass(currentUser, courseId, ERole.Teacher, false)) {
             return ok(CommonResponse.builder()
-                    .status(EApiStatus.Error)
-                    .result(EResponseResult.Error)
+                    .status(EStatus.Error)
+                    .result(EResult.Error)
                     .content("")
-                    .message("Update assignment is not permitted")
+                    .message("Create assignment is not permitted")
                     .build());
         }
 
         CreateNewAssignmentArgs args = ReflectionUtils.mapFrom(request);
         var assignment = courseService.createAssignment(args);
         return ok(CommonResponse.builder()
-                .status(EApiStatus.Success)
-                .result(EResponseResult.Successful)
+                .status(EStatus.Success)
+                .result(EResult.Successful)
                 .message("Create new assignment successfully")
                 .content(new AssignmentResponse(assignment))
                 .build());
@@ -165,17 +176,17 @@ public class CourseController {
 
         if (!validateUserInClass(currentUser, courseId, ERole.Teacher, false)) {
             return ok(CommonResponse.builder()
-                    .status(EApiStatus.Error)
-                    .result(EResponseResult.Error)
+                    .status(EStatus.Error)
+                    .result(EResult.Error)
                     .content("")
                     .message("Update assignment is not permitted")
                     .build());
         }
         try {
             var updatedAssignment = new AssignmentResponse(courseService.updateAssignment(request, request.getCurrentUser(), assignmentId));
-            return ok(CommonResponse.builder().result(EResponseResult.Successful).status(EApiStatus.Success).message("Update assignment successfully").content(updatedAssignment).build());
+            return ok(CommonResponse.builder().result(EResult.Successful).status(EStatus.Success).message("Update assignment successfully").content(updatedAssignment).build());
         } catch (NotFoundException e) {
-            return new ResponseEntity<>(CommonResponse.builder().status(EApiStatus.Error).result(EResponseResult.Error).message(String.format("Not found assignment for assignment id: %d", assignmentId)).content("").build(), HttpStatus.NOT_FOUND);
+            return new ResponseEntity<>(CommonResponse.builder().status(EStatus.Error).result(EResult.Error).message(String.format("Not found assignment for assignment id: %d", assignmentId)).content("").build(), HttpStatus.NOT_FOUND);
         }
     }
 
@@ -204,26 +215,45 @@ public class CourseController {
         return true;
     }
 
+    private boolean validateUserInClass(String username, int courseId, ERole role) {
+        return validateUserInClass(username, courseId, role, false);
+    }
+
+    private boolean validateUserInClass(String username, int courseId) {
+        return validateUserInClass(username, courseId, ERole.None, false);
+    }
+
     @DeleteMapping("/{id}/assignments/{assignmentId}")
     public ResponseEntity<?> deleteAssignment(@PathVariable("id") Integer courseId, @PathVariable("assignmentId") Integer assignmentId, HttpServletRequest httpRequest, @RequestParam("currentUser") String currentUser) {
         var username = jwtUtils.getUserNameFromRequest(httpRequest);
-        if (validateUserInClass(username, courseId, ERole.Teacher, false)) {
-            try {
-                courseService.deleteAssignment(assignmentId);
-                return ResponseEntity.ok(CommonResponse.builder().status(EApiStatus.Success).result(EResponseResult.Successful).message("Delete assigment success").content(assignmentId).build());
-            } catch (NotFoundException e) {
-                return new ResponseEntity<>(CommonResponse.builder().message(String.format("Not found assignment by id %d", assignmentId)).content("").result(EResponseResult.Error).status(EApiStatus.Error).build(), HttpStatus.NOT_FOUND);
-            }
+        if (!validateUserInClass(username, courseId, ERole.Teacher, false)) {
+            return ResponseEntity.ok()
+                    .body(CommonResponse.builder().result(EResult.Error).status(EStatus.Error)
+                            .message("Delete assignment is not permitted").content("").build()
+                    );
         }
-        return ResponseEntity.badRequest().body(CommonResponse.builder().result(EResponseResult.Error).status(EApiStatus.Error).message("Bad Request").content("").build());
+        try {
+            courseService.deleteAssignment(assignmentId);
+            return ResponseEntity.ok(CommonResponse.builder().status(EStatus.Success).result(EResult.Successful).message("Delete assigment success").content(assignmentId).build());
+        } catch (NotFoundException e) {
+            return new ResponseEntity<>(CommonResponse.builder().message(String.format("Not found assignment by id %d", assignmentId)).content("").result(EResult.Error).status(EStatus.Error).build(), HttpStatus.NOT_FOUND);
+        }
+
     }
 
     @PostMapping("/{id}/assignments-sort")
     public ResponseEntity<?> postSortAssignment(HttpServletRequest httpRequest, @PathVariable("id") Integer id, @RequestBody SortAssignmentRequest request) {
         var currentUser = jwtUtils.getUserNameFromRequest(httpRequest);
-        // TODO validate
+        if (!validateUserInClass(currentUser, id, ERole.None, false)) {
+            return ok(CommonResponse.builder()
+                    .status(EStatus.Error)
+                    .result(EResult.Error)
+                    .content("")
+                    .message("Permission denied for sorting assignments")
+                    .build());
+        }
         if (request.getAssignmentSimples().size() != 2) {
-            return ResponseEntity.badRequest().body(CommonResponse.builder().status(EApiStatus.Error).result(EResponseResult.Error).message("AssignmentSimples must have the size of 2").content("").build());
+            return ResponseEntity.badRequest().body(CommonResponse.builder().status(EStatus.Error).result(EResult.Error).message("AssignmentSimples must have the size of 2").content("").build());
         }
 
         var first = request.getAssignmentSimples().get(0);
@@ -235,41 +265,72 @@ public class CourseController {
         secondAssignment.setOrder(second.getOrder());
         firstAssignment = assignmentRepository.save(firstAssignment);
         secondAssignment = assignmentRepository.save(secondAssignment);
-        return ok(CommonResponse.builder().status(EApiStatus.Success).result(EResponseResult.Successful).content((Serializable) List.of(new AssignmentResponse(firstAssignment), new AssignmentResponse(secondAssignment))).message("Sort assignment successfully").build());
+        return ok(CommonResponse.builder().status(EStatus.Success).result(EResult.Successful).content((Serializable) List.of(new AssignmentResponse(firstAssignment), new AssignmentResponse(secondAssignment))).message("Sort assignment successfully").build());
     }
 
     @GetMapping("/{id}/all-grades")
     public ResponseEntity<?> getAllGrades(@PathVariable("id") Integer courseId, @RequestParam("currentUser") String currentUser) {
-        // TODO validate
+        if (!validateUserInClass(currentUser, courseId, ERole.Teacher, false)) {
+            return ok(CommonResponse.builder()
+                    .status(EStatus.Error)
+                    .result(EResult.Error)
+                    .content("")
+                    .message("Grade all grades failed!!")
+                    .build());
+        }
         Course course = courseService.findCourseById(currentUser, courseId);
-        if (course == null)
-            return ResponseEntity.badRequest().body(CommonResponse.builder().message(String.format("Not found course by id %d", courseId)).content("").status(EApiStatus.Error).result(EResponseResult.Error).build());
+        if (course == null) {
+            return ResponseEntity.badRequest()
+                    .body(CommonResponse.builder()
+                            .message(String.format("Not found course by id %d", courseId))
+                            .content("")
+                            .status(EStatus.Error)
+                            .result(EResult.Error)
+                            .build()
+                    );
+        }
 
         var assignments = course.getAssignments().stream().map(AssignmentResponse::new).toList();
         var result = courseService.getAllGrades(courseId);
-        return ResponseEntity.ok().body(CommonResponse.builder().status(EApiStatus.Success).result(EResponseResult.Successful).message("Get all grades successfully").content(GradeResponseWrapper.builder().header(assignments).scores(result).total(result.size()).build()).build());
+        return ResponseEntity.ok().body(CommonResponse.builder().status(EStatus.Success).result(EResult.Successful).message("Get all grades successfully").content(GradeResponseWrapper.builder().header(assignments).scores(result).total(result.size()).build()).build());
     }
 
     private final StudentRepository studentRepository;
 
     @GetMapping("/{id}/all-grades/student")
     public ResponseEntity<?> getGradeByStudent(@PathVariable("id") Integer courseId, HttpServletRequest httpRequest) throws NotFoundException {
-        // TODO validation
         var currentUser = jwtUtils.getUserNameFromRequest(httpRequest);
+        if (!validateUserInClass(currentUser, courseId, ERole.Student)) {
+            return ok(CommonResponse.builder()
+                    .status(EStatus.Error)
+                    .result(EResult.Error)
+                    .content("")
+                    .message("Permission denied for get all grade of student ")
+                    .build());
+        }
+
         var user = userService.findByUsername(currentUser);
         if (user == null) return ResponseEntity.notFound().build();
         var student = studentRepository.findByStudentId(user.getStudentID());
         var result = courseService.getGradeOfCourseByStudentTableId(courseId, student.getId());
         Course course = courseService.findCourseById(currentUser, courseId);
         if (course == null) throw new NotFoundException("Not found course by id " + courseId);
-        return ResponseEntity.ok().body(CommonResponse.builder().result(EResponseResult.Successful).status(EApiStatus.Success).message("Get grade for student successfully").content(SingleStudentGradeResponse.builder().total(1).header(course.getAssignments().stream().map(AssignmentResponse::new).toList()).scores(result).build()).build());
+        return ResponseEntity.ok().body(CommonResponse.builder().result(EResult.Successful).status(EStatus.Success).message("Get grade for student successfully").content(SingleStudentGradeResponse.builder().total(1).header(course.getAssignments().stream().map(AssignmentResponse::new).toList()).scores(result).build()).build());
     }
 
     @GetMapping("/{id}/assignments/{assignmentId}/all-grades")
-    public ResponseEntity<?> getAllGradesV2(@PathVariable("id") Integer id, @PathVariable("assignmentId") Integer assignmentId, @RequestParam(value = "currentUser", required = false) String currentUser) {
-        // TODO validate
+    public ResponseEntity<?> getAllGradesV2(@PathVariable("id") Integer id, @PathVariable("assignmentId") Integer assignmentId, @RequestParam(value = "currentUser", required = false) String currentUser, HttpServletRequest httpRequest) {
+        currentUser = jwtUtils.getUserNameFromRequest(httpRequest);
+        if (!validateUserInClass(currentUser, id, ERole.Teacher)) {
+            return ok(CommonResponse.builder()
+                    .status(EStatus.Error)
+                    .result(EResult.Error)
+                    .content("")
+                    .message("Get all grade assignments failed!!")
+                    .build());
+        }
         var result = courseService.getAllGradeAssignment(assignmentId);
-        return ResponseEntity.ok().body(CommonResponse.builder().content(DataResponse.builder().data(result).total(result.size()).build()).message("Get assignment grade successfully").status(EApiStatus.Success).result(EResponseResult.Successful).build());
+        return ResponseEntity.ok().body(CommonResponse.builder().content(DataResponse.builder().data(result).total(result.size()).build()).message("Get assignment grade successfully").status(EStatus.Success).result(EResult.Successful).build());
     }
 
 
@@ -278,7 +339,7 @@ public class CourseController {
     public ResponseEntity<?> downloadTemplateUpdateMember(HttpServletResponse response) {
         var resource = new ByteArrayResource(ExcelHelper.createFileExcel("StudentID", "FullName"));
         var fileName = "TemplateUpdateMember.xlsx";
-        response.setHeader("Content-Disposition", String.format("attachment; filename=%s; filename*=UTF-8''%s", fileName, fileName));
+        response.setHeader(CONTENT_DISPOSITION, String.format("attachment; filename=%s; filename*=UTF-8''%s", fileName, fileName));
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_OCTET_STREAM).contentLength(resource.contentLength()).body(resource);
     }
 
@@ -288,7 +349,7 @@ public class CourseController {
     public ResponseEntity<?> downloadTemplateUpdateGrade(HttpServletResponse response) {
         var resource = new ByteArrayResource(ExcelHelper.createFileExcel("StudentID", "Grade"));
         var fileName = "UpdateGradeTemplate.xlsx";
-        response.setHeader("Content-Disposition", String.format("attachment; filename=%s;filename*=UTF-8''%s", fileName, fileName));
+        response.setHeader(CONTENT_DISPOSITION, String.format("attachment; filename=%s;filename*=UTF-8''%s", fileName, fileName));
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_OCTET_STREAM).contentLength(resource.contentLength()).body(resource);
     }
 
@@ -315,18 +376,27 @@ public class CourseController {
                 var g = Grade.builder().assigment(assignment).description("").gradeAssignment((float) gradeCell.getNumericCellValue()).mssv(studentId).isFinalized((byte) 0).student(student).build();
                 courseService.saveGrade(g, currentUser, assignmentsId, courseId);
             }
-            return ok(CommonResponse.builder().result(EResponseResult.Successful).status(EApiStatus.Success).content("").message("Update grade successfully").build());
+            return ok(CommonResponse.builder().result(EResult.Successful).status(EStatus.Success).content("").message("Update grade successfully").build());
         }
     }
 
 
     @PostMapping(value = "/{id}/update-student", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<?> postUpdateStudentList(@PathVariable("id") Integer courseId, @ModelAttribute FormDataUpload formDataUpload, HttpServletRequest request) throws IOException {
-        // TODO validate
+    public ResponseEntity<?> postUpdateStudentList(@PathVariable("id") Integer courseId,
+                                                   @ModelAttribute FormDataUpload formDataUpload,
+                                                   HttpServletRequest request) throws IOException {
         var currentUser = jwtUtils.getUserNameFromRequest(request);
+        if (!validateUserInClass(currentUser, courseId, ERole.None, true)) {
+            return ok(CommonResponse.builder()
+                    .status(EStatus.Error)
+                    .result(EResult.Error)
+                    .content("")
+                    .message("Update student failed because of permission denied!!")
+                    .build());
+        }
         var studentList = convertFileToListStudents(new XSSFWorkbook(formDataUpload.getFile().getInputStream()));
         courseService.updateStudentsInCourse(studentList, courseId, currentUser);
-        return ResponseEntity.ok().body(CommonResponse.builder().status(EApiStatus.Success).result(EResponseResult.Successful).content("").message("Update members in class success").build());
+        return ResponseEntity.ok().body(CommonResponse.builder().status(EStatus.Success).result(EResult.Successful).content("").message("Update members in class success").build());
     }
 
     @SneakyThrows
@@ -353,6 +423,14 @@ public class CourseController {
     public ResponseEntity<?> postUpdateAssignmentNormal(@PathVariable("id") Integer courseId, @PathVariable("assignmentsId") Integer assignmentsId, @RequestBody UpdateGradeNormalRequest request, HttpServletRequest httpServletRequest) {
         var currentUser = jwtUtils.getUserNameFromRequest(httpServletRequest);
         request.setCurrentUser(currentUser);
+        if (!validateUserInClass(request.getCurrentUser(), courseId, ERole.Teacher)) {
+            return ok(CommonResponse.builder()
+                    .status(EStatus.Error)
+                    .result(EResult.Error)
+                    .content("")
+                    .message("Permission denied for update grade for all ")
+                    .build());
+        }
         var success = courseService.updateGradeNormal(request, assignmentsId, courseId);
         if (success) {
             var user = userService.findByUsername(request.getCurrentUser());
@@ -365,14 +443,21 @@ public class CourseController {
             // TODO SOCKET
 
         }
-        return ok(CommonResponse.builder().status(EApiStatus.Success).result(EResponseResult.Successful).content(success).message("Update grade normal success").build());
+        return ok(CommonResponse.builder().status(EStatus.Success).result(EResult.Successful).content(success).message("Update grade normal success").build());
     }
 
 
     @PostMapping("/{id}/assignments/{assignmentsId}/update-grade-finalized")
     public ResponseEntity<?> postUpdateGradeFinalized(@PathVariable("id") Integer courseId, @PathVariable("assignmentsId") Integer assignmentsId, @RequestBody UpdateGradeSpecificRequest request, HttpServletRequest httpServletRequest) throws NotFoundException {
         request.setCurrentUser(jwtUtils.getUserNameFromRequest(httpServletRequest));
-        // TODO validate teacher
+        if (!validateUserInClass(request.getCurrentUser(), courseId, ERole.Teacher)) {
+            return ok(CommonResponse.builder()
+                    .status(EStatus.Error)
+                    .result(EResult.Error)
+                    .content("")
+                    .message("Permission denied for update grade for specific ")
+                    .build());
+        }
         var result = courseService.updateGradeSpecific(UpdateGradeSpecificArgs.builder().courseId(courseId).assignmentId(assignmentsId).isFinalized(request.getIsFinalized()).gradeAssignment(request.getGrade()).mssv(request.getMssv()).currentUser(request.getCurrentUser()).build());
         var studentUser = userService.findByStudentCode(request.getMssv());
         if (result && studentUser != null) {
@@ -383,7 +468,7 @@ public class CourseController {
             var notification = notificationService.createStudentNotification(CreateStudentNotificationSingleArgs.builder().courseId(courseId).studentId(student.getStudentId()).gradeId(courseService.findGradeByCourseIdAndAssignmentId(request.getMssv(), courseId, assignmentsId)).message(String.format("%s đã trả điểm cho bài tập %s", user.getNormalizedUserName(), assignment.getName())).currentUser(request.getCurrentUser()).build());
             log.info("Send notification {}", notification);
         }
-        return ok(CommonResponse.builder().message("Get update grade for individual successfully").status(EApiStatus.Success).result(EResponseResult.Successful).content(result).build());
+        return ok(CommonResponse.builder().message("Get update grade for individual successfully").status(EStatus.Success).result(EResult.Successful).content(result).build());
     }
 
     @PostMapping(value = "/send-mail", consumes = MediaType.APPLICATION_JSON_VALUE)
@@ -391,18 +476,27 @@ public class CourseController {
         var tokenClassCode = StringHelper.generateHashString(request.getClassCode());
         var tokenEmail = StringHelper.generateHashString(request.getMailPersonReceive());
         var inviteLink = String.format("%s/class-join?classToken=%s&role=%s&email=%s", URL_CLIENT, tokenClassCode, request.getRole(), tokenEmail);
-        emailService.sendMail(request.getMailPersonReceive(), "Mời vào lớp", "Vào lớp", inviteLink, "Mời vào lớp", "Email này dùng để mời thành viên vào lớp");
-        return ok(CommonResponse.builder().status(EApiStatus.Success).result(EResponseResult.Successful).content("").message(String.format("Send mail to %s successfully", request.getMailPersonReceive())).build());
+        emailService.sendMail(request.getMailPersonReceive(), "Mời vào lớp", "Vào lớp", inviteLink, "Email này dùng để mời thành viên vào lớp");
+        return ok(CommonResponse.builder().status(EStatus.Success).result(EResult.Successful).content("").message(String.format("Send mail to %s successfully", request.getMailPersonReceive())).build());
     }
 
-    // TODO testing
     @GetMapping("/{id}/everyone")
-    public ResponseEntity<?> getMembersInCourse(@PathVariable("id") Integer courseId) {
-
+    public ResponseEntity<?> getMembersInCourse(@PathVariable("id") Integer courseId, HttpServletRequest request) {
+        var currentUser = jwtUtils.getUserNameFromRequest(request);
         var listTeachers = courseService.getTeachers(courseId);
         var listStudent = courseService.getStudents(courseId);
-
-        return ok(MemberCourseResponse.builder().total(listStudent.size() + listTeachers.size()).teachers(listTeachers).students(listStudent).build());
+        var course = courseService.findCourseById(currentUser, courseId);
+        return ok(CommonResponse.builder()
+                .status(EStatus.Success)
+                .result(EResult.Successful)
+                .message("Get members in course successfully")
+                .content(MemberCourseResponse.builder()
+                        .total(listStudent.size() + listTeachers.size())
+                        .owner(course != null ? course.getCreateBy() : "")
+                        .teachers(listTeachers)
+                        .students(listStudent)
+                        .build())
+                .build());
     }
 
 
@@ -437,7 +531,7 @@ public class CourseController {
             book.write(bos);
             var byteResource = new ByteArrayResource(bos.toByteArray());
             var fileName = "GradeBoard.xlsx";
-            response.setHeader("Content-Disposition", String.format("attachment; filename=%s;filename*=UTF-8''%s", fileName, fileName));
+            response.setHeader(CONTENT_DISPOSITION, String.format("attachment; filename=%s;filename*=UTF-8''%s", fileName, fileName));
             return ok().contentType(MediaType.APPLICATION_OCTET_STREAM).contentLength(byteResource.contentLength()).body(byteResource);
         }
     }
@@ -449,7 +543,7 @@ public class CourseController {
         request.setCurrentUser(currentUser);
         Course course = courseService.findAllCourses().stream().filter(c -> StringUtils.hasText(c.getCourseCode()) && StringHelper.check(request.getToken(), c.getCourseCode())).findFirst().orElse(null);
         if (course == null) {
-            return ok(CommonResponse.builder().status(EApiStatus.Error).result(EResponseResult.Error).content("").message("Not found course").build());
+            return ok(CommonResponse.builder().status(EStatus.Error).result(EResult.Error).content("").message(NOT_FOUND_COURSE_MSG).build());
         }
 
         var user = AuthenticationUtils.appUserDetails().unwrap();
@@ -458,12 +552,12 @@ public class CourseController {
         }
         if (!StringUtils.hasText(request.getInvitee())) {
             if (courseService.addMemberIntoCourse(user, request.getRole(), course.getId())) {
-                return ok(CommonResponse.builder().status(EApiStatus.Success)
-                        .result(EResponseResult.Successful).content("").message("Add member successfully").build());
+                return ok(CommonResponse.builder().status(EStatus.Success)
+                        .result(EResult.Successful).content("").message("Add member successfully").build());
             } else {
                 return ok(CommonResponse.builder()
-                        .status(EApiStatus.Error)
-                        .result(EResponseResult.Error)
+                        .status(EStatus.Error)
+                        .result(EResult.Error)
                         .content("")
                         .message("Add member failed")
                         .build());
@@ -473,8 +567,8 @@ public class CourseController {
         if (invitee == null) {
             return ok(
                     CommonResponse.builder()
-                            .status(EApiStatus.Error)
-                            .result(EResponseResult.Error)
+                            .status(EStatus.Error)
+                            .result(EResult.Error)
                             .content("")
                             .message("Not found invitee user")
                             .build()
@@ -482,12 +576,12 @@ public class CourseController {
         }
 
         if (courseService.addMemberIntoCourse(invitee.getId(), user.getUserName(), request.getRole(), course.getId())) {
-            return ok(CommonResponse.builder().status(EApiStatus.Success)
-                    .result(EResponseResult.Successful).content("").message("Add member successfully").build());
+            return ok(CommonResponse.builder().status(EStatus.Success)
+                    .result(EResult.Successful).content("").message("Add member successfully").build());
         } else {
             return ok(CommonResponse.builder()
-                    .status(EApiStatus.Error)
-                    .result(EResponseResult.Error)
+                    .status(EStatus.Error)
+                    .result(EResult.Error)
                     .content("")
                     .message("Add member failed")
                     .build());
@@ -500,8 +594,8 @@ public class CourseController {
         var user = AuthenticationUtils.appUserDetails().unwrap();
         if (user == null) {
             return ok(CommonResponse.builder()
-                    .status(EApiStatus.Error)
-                    .result(EResponseResult.Error)
+                    .status(EStatus.Error)
+                    .result(EResult.Error)
                     .content("")
                     .message("Not found user")
                     .build());
@@ -509,17 +603,17 @@ public class CourseController {
         var course = courseService.findCourseById(currentUser, request.getCourseId());
         if (course == null) {
             return ok(CommonResponse.builder()
-                    .message("Not found course")
+                    .message(NOT_FOUND_COURSE_MSG)
                     .content("")
-                    .status(EApiStatus.Error)
-                    .result(EResponseResult.Error)
+                    .status(EStatus.Error)
+                    .result(EResult.Error)
                     .build());
         }
 
         if (!Objects.equals(user.getUserName(), course.getCreateBy())) {
             return ok(CommonResponse.builder()
-                    .status(EApiStatus.Error)
-                    .result(EResponseResult.Error)
+                    .status(EStatus.Error)
+                    .result(EResult.Error)
                     .message("You are not the owner of this course")
                     .content("")
                     .build());
@@ -528,16 +622,16 @@ public class CourseController {
         var courseUser = courseUserRepository.findCourseUserByUserIdAndCourseId(request.getUserId(), request.getCourseId());
         if (courseUser == null) {
             return ok(CommonResponse.builder()
-                    .status(EApiStatus.Error)
-                    .result(EResponseResult.Error)
+                    .status(EStatus.Error)
+                    .result(EResult.Error)
                     .content("")
                     .message("Not found user in class")
                     .build());
         }
         courseService.updateRole(courseUser, request.getRole(), currentUser);
         return ok(CommonResponse.builder()
-                .status(EApiStatus.Success)
-                .result(EResponseResult.Successful)
+                .status(EStatus.Success)
+                .result(EResult.Successful)
                 .content("")
                 .message("Update role user success")
                 .build());
@@ -547,30 +641,31 @@ public class CourseController {
     public ResponseEntity<?> removeMember(@RequestBody RemoveMemberInCourseRequest request, HttpServletRequest httpServletRequest) {
         var currentUser = jwtUtils.getUserNameFromRequest(httpServletRequest);
         request.setCurrentUser(currentUser);
+
         var user = userService.findByUsername(request.getCurrentUser());
         if (user == null) {
             return ok(CommonResponse.builder()
                     .message("Not found user")
                     .content("")
-                    .status(EApiStatus.Error)
-                    .result(EResponseResult.Error)
+                    .status(EStatus.Error)
+                    .result(EResult.Error)
                     .build());
         }
 
         var course = courseService.findCourseById(currentUser, request.getCourseId());
         if (course == null) {
             return ok(CommonResponse.builder()
-                    .status(EApiStatus.Error)
-                    .result(EResponseResult.Error)
+                    .status(EStatus.Error)
+                    .result(EResult.Error)
                     .content("")
-                    .message("Not found course")
+                    .message(NOT_FOUND_COURSE_MSG)
                     .build());
         }
 
         if (!Objects.equals(course.getCreateBy(), user.getUserName())) {
             return ok(CommonResponse.builder()
-                    .status(EApiStatus.Error)
-                    .result(EResponseResult.Error)
+                    .status(EStatus.Error)
+                    .result(EResult.Error)
                     .content("")
                     .message("You are not the owner of the class")
                     .build());
@@ -579,8 +674,8 @@ public class CourseController {
         var courseUser = courseUserRepository.findCourseUserByUserIdAndCourseId(request.getUserId(), request.getCourseId());
         if (courseUser == null) {
             return ok(CommonResponse.builder()
-                    .status(EApiStatus.Error)
-                    .result(EResponseResult.Error)
+                    .status(EStatus.Error)
+                    .result(EResult.Error)
                     .content("")
                     .message("Not found user in class")
                     .build());
@@ -588,21 +683,19 @@ public class CourseController {
         try {
             courseUserRepository.delete(courseUser);
             return ok(CommonResponse.builder()
-                    .status(EApiStatus.Success)
-                    .result(EResponseResult.Successful)
+                    .status(EStatus.Success)
+                    .result(EResult.Successful)
                     .content("")
                     .message("Delete member from class success")
                     .build());
         } catch (Exception e) {
             e.printStackTrace();
             return ok(CommonResponse.builder()
-                    .status(EApiStatus.Error)
-                    .result(EResponseResult.Error)
+                    .status(EStatus.Error)
+                    .result(EResult.Error)
                     .content("")
                     .message("Cannot delete user " + e.getMessage())
                     .build());
         }
     }
-
-
 }

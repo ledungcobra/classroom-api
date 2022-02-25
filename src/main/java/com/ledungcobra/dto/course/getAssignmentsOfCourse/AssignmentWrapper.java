@@ -1,4 +1,4 @@
-package com.ledungcobra.dto.getAssignmentsOfCourse;
+package com.ledungcobra.dto.course.getAssignmentsOfCourse;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

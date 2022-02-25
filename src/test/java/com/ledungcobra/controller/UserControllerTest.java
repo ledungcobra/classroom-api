@@ -100,8 +100,8 @@ class UserControllerTest extends BaseTest {
         var response = objectMapper.readValue(result.getResponse().getContentAsString(StandardCharsets.UTF_8), new TypeReference<CommonResponse<LoginResponse>>() {
         });
 
-        assertThat(response.getStatus()).isEqualTo(EApiStatus.Success);
-        assertThat(response.getResult()).isEqualTo(EResponseResult.Successful);
+        assertThat(response.getStatus()).isEqualTo(EStatus.Success);
+        assertThat(response.getResult()).isEqualTo(EResult.Successful);
         assertThat(response.getMessage()).isEqualTo(LOGIN_SUCCESS_MSG);
         var body = response.getContent();
         assertThat(body).isNotNull();
@@ -263,7 +263,7 @@ class UserControllerTest extends BaseTest {
         var response = objectMapper.readValue(result, new TypeReference<CommonResponse<UserSimpleResponse>>() {
         });
         assertThat(response).isNotNull();
-        assertThat(response.getStatus()).isEqualTo(EApiStatus.Success);
+        assertThat(response.getStatus()).isEqualTo(EStatus.Success);
         var content = response.getContent();
         assertThat(content).isNotNull();
         assertThat(content.getStudentID()).isEqualTo(studentCode);

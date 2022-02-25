@@ -10,6 +10,7 @@ import com.ledungcobra.dto.common.CreateStudentNotificationsArgs;
 import com.ledungcobra.dto.common.StudentIdStudentCode;
 import com.ledungcobra.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -33,7 +34,7 @@ public class NotificationServiceImpl implements NotificationService {
                         .message(args.getMessage())
                         .courseId(args.getCourseId())
                         .gradeId(gradeRepository
-                                .findGradeByStudentId(u.getStudentID(),args.getAssignmentId(),args.getCourseId()).getId())
+                                .findGradeByStudentId(u.getStudentID(), args.getAssignmentId(), args.getCourseId()).getId())
                         .gradeReviewId(args.getGradeReviewId())
                         .userId(u.getId())
                         .isSeen((byte) 0)
@@ -56,5 +57,36 @@ public class NotificationServiceImpl implements NotificationService {
                 .build();
         notification.setIsSeen(false);
         return notificationRepository.save(AuditUtils.createAudit(notification, args.getCurrentUser()));
+    }
+
+    // TODO Testing
+    @Override
+    public long countByUserId(Integer userId) {
+        return notificationRepository.countByUserId(userId);
+    }
+
+    @Override
+    public List<Notification> findAllByUserId(Integer id, Pageable pageable) {
+        return notificationRepository.findAllByUserId(id, pageable);
+    }
+
+    @Override
+    public List<Notification> findAllByUserId(Integer id) {
+        return notificationRepository.findAllByUserId(id);
+    }
+
+    @Override
+    public Notification findByUserIdAndId(Integer userId, Integer id) {
+        return notificationRepository.findByUserIdAndId(userId, id);
+    }
+
+    @Override
+    public void save(Notification notification, String auditor) {
+        notificationRepository.save(AuditUtils.updateAudit(notification, auditor));
+    }
+
+    @Override
+    public void updateBatch(List<Notification> notifications) {
+        notificationRepository.saveAll(notifications);
     }
 }

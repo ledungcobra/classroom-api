@@ -14,7 +14,10 @@ import com.ledungcobra.dto.common.DataResponse;
 import com.ledungcobra.dto.common.UpdateGradeSpecificRequest;
 import com.ledungcobra.dto.course.getAllGrades.GradeResponseWrapper;
 import com.ledungcobra.dto.course.getAllGradesV2.GradeOfAssignmentResponse;
+import com.ledungcobra.dto.course.getAssignmentsOfCourse.AssignmentResponse;
+import com.ledungcobra.dto.course.getAssignmentsOfCourse.AssignmentWrapper;
 import com.ledungcobra.dto.course.getGradeByStudent.SingleStudentGradeResponse;
+import com.ledungcobra.dto.course.getMembersInCourse.MemberCourseResponse;
 import com.ledungcobra.dto.course.index.CourseResponse;
 import com.ledungcobra.dto.course.index.CourseWrapper;
 import com.ledungcobra.dto.course.postCreateCourse.CreateCourseRequest;
@@ -24,8 +27,6 @@ import com.ledungcobra.dto.course.postUpdateAssignmentNormal.UpdateGradeNormalRe
 import com.ledungcobra.dto.course.postUpdateAssignmentNormal.UpdateGradeSpecificRequestBase;
 import com.ledungcobra.dto.course.updateAssigment.UpdateAssignmentsRequest;
 import com.ledungcobra.dto.email.postSendMail.SendMailJoinToCourseRequest;
-import com.ledungcobra.dto.getAssignmentsOfCourse.AssignmentResponse;
-import com.ledungcobra.dto.getAssignmentsOfCourse.AssignmentWrapper;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.xssf.usermodel.XSSFRow;
@@ -49,8 +50,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @Slf4j
 @Transactional
-public
-class CourseControllerTest extends BaseTest {
+public class CourseControllerTest extends BaseTest {
 
     @Autowired
     private JwtUtils jwtUtils;
@@ -123,8 +123,8 @@ class CourseControllerTest extends BaseTest {
         var response = objectMapper.readValue(result, new TypeReference<CommonResponse<CourseResponse>>() {
         });
         assertThat(response).isNotNull();
-        assertThat(response.getStatus()).isEqualTo(EApiStatus.Success.getValue());
-        assertThat(response.getResult()).isEqualTo(EResponseResult.Successful.getValue());
+        assertThat(response.getStatus()).isEqualTo(EStatus.Success.getValue());
+        assertThat(response.getResult()).isEqualTo(EResult.Successful.getValue());
         var course = response.getContent();
         assertThat(course).isNotNull();
         assertThat(course.getId()).isEqualTo(1);
@@ -145,8 +145,8 @@ class CourseControllerTest extends BaseTest {
         var response = objectMapper.readValue(result.getResponse().getContentAsString(StandardCharsets.UTF_8), new TypeReference<CommonResponse<AssignmentWrapper>>() {
         });
         assertThat(response).isNotNull();
-        assertThat(response.getStatus()).isEqualTo(EApiStatus.Success.getValue());
-        assertThat(response.getResult()).isEqualTo(EResponseResult.Successful.getValue());
+        assertThat(response.getStatus()).isEqualTo(EStatus.Success.getValue());
+        assertThat(response.getResult()).isEqualTo(EResult.Successful.getValue());
         assertThat(response.getMessage()).isNotBlank().isNotNull();
         assertThat(response.getContent()).isNotNull();
         var assignments = response.getContent();
@@ -170,8 +170,8 @@ class CourseControllerTest extends BaseTest {
                 new TypeReference<CommonResponse<AssignmentResponse>>() {
                 });
         assertThat(response).isNotNull();
-        assertThat(response.getStatus()).isEqualTo(EApiStatus.Success.getValue());
-        assertThat(response.getResult()).isEqualTo(EResponseResult.Successful.getValue());
+        assertThat(response.getStatus()).isEqualTo(EStatus.Success.getValue());
+        assertThat(response.getResult()).isEqualTo(EResult.Successful.getValue());
         assertThat(response.getMessage()).isNotBlank().isNotNull();
         assertThat(response.getContent()).isNotNull();
         var content = response.getContent();
@@ -222,8 +222,8 @@ class CourseControllerTest extends BaseTest {
 
         assertThat(commonResponse).isNotNull();
         assertThat(commonResponse.getMessage()).isNotNull().isNotBlank();
-        assertThat(commonResponse.getResult()).isEqualTo(EResponseResult.Successful.getValue());
-        assertThat(commonResponse.getStatus()).isEqualTo(EApiStatus.Success.getValue());
+        assertThat(commonResponse.getResult()).isEqualTo(EResult.Successful.getValue());
+        assertThat(commonResponse.getStatus()).isEqualTo(EStatus.Success.getValue());
         assertThat(commonResponse.getContent()).isNotNull();
         var content = commonResponse.getContent();
         assertThat(content.getHeader()).isNotNull().hasSize(4);
@@ -236,7 +236,7 @@ class CourseControllerTest extends BaseTest {
     @SneakyThrows
     void getGradeByStudent() {
         var result = mockMvc.perform(get("/course/1/all-grades/student")
-                        .headers(jwtUtils.buildAuthorizationHeader("tanhank2k"))
+                        .headers(jwtUtils.buildAuthorizationHeader("test"))
                         .contentType(MediaType.APPLICATION_JSON)
                 ).andExpect(status().isOk())
                 .andDo(print()).andReturn();
@@ -246,10 +246,9 @@ class CourseControllerTest extends BaseTest {
         assertThat(response).isNotNull();
         assertThat(response.getContent()).isNotNull();
         assertThat(response.getMessage()).isNotBlank().isNotNull();
-        assertThat(response.getStatus()).isEqualTo(EApiStatus.Success.getValue());
+        assertThat(response.getStatus()).isEqualTo(EStatus.Success.getValue());
         assertThat(response.getContent().getHeader()).isNotEmpty();
         assertThat(response.getContent().getScores()).isNotNull();
-
     }
 
     @Test
@@ -266,8 +265,8 @@ class CourseControllerTest extends BaseTest {
         var response = objectMapper.readValue(responseString, new TypeReference<CommonResponse<DataResponse<GradeOfAssignmentResponse>>>() {
         });
         assertThat(response).isNotNull();
-        assertThat(response.getStatus()).isEqualTo(EApiStatus.Success.getValue());
-        assertThat(response.getResult()).isEqualTo(EResponseResult.Successful.getValue());
+        assertThat(response.getStatus()).isEqualTo(EStatus.Success.getValue());
+        assertThat(response.getResult()).isEqualTo(EResult.Successful.getValue());
         assertThat(response.getMessage()).isNotNull().isNotBlank();
         assertThat(response.getContent()).isNotNull();
         var content = response.getContent();
@@ -315,8 +314,8 @@ class CourseControllerTest extends BaseTest {
         var res = objectMapper.readValue(responseString, new TypeReference<CommonResponse<String>>() {
         });
         assertThat(res).isNotNull();
-        assertThat(res.getStatus()).isEqualTo(EApiStatus.Success.getValue());
-        assertThat(res.getResult()).isEqualTo(EResponseResult.Successful.getValue());
+        assertThat(res.getStatus()).isEqualTo(EStatus.Success.getValue());
+        assertThat(res.getResult()).isEqualTo(EResult.Successful.getValue());
 
         var next = true;
         for (Object[] row : data) {
@@ -360,8 +359,8 @@ class CourseControllerTest extends BaseTest {
         var res = objectMapper.readValue(responseString, new TypeReference<CommonResponse<String>>() {
         });
         assertThat(res).isNotNull();
-        assertThat(res.getResult()).isEqualTo(EResponseResult.Successful.getValue());
-        assertThat(res.getStatus()).isEqualTo(EApiStatus.Success.getValue());
+        assertThat(res.getResult()).isEqualTo(EResult.Successful.getValue());
+        assertThat(res.getStatus()).isEqualTo(EStatus.Success.getValue());
         assertThat(res.getMessage()).isNotBlank().isNotNull();
         for (int i = 1; i < data.length; i++) {
             Object[] row = data[i];
@@ -404,8 +403,8 @@ class CourseControllerTest extends BaseTest {
         var res = objectMapper.readValue(resString, new TypeReference<CommonResponse<Boolean>>() {
         });
         assertThat(res).isNotNull();
-        assertThat(res.getStatus()).isEqualTo(EApiStatus.Success.getValue());
-        assertThat(res.getResult()).isEqualTo(EResponseResult.Successful.getValue());
+        assertThat(res.getStatus()).isEqualTo(EStatus.Success.getValue());
+        assertThat(res.getResult()).isEqualTo(EResult.Successful.getValue());
         assertThat(res.getContent()).isTrue();
         assertThat(notificationRepository.count()).isEqualTo(countNotification + scores.size());
     }
@@ -431,8 +430,8 @@ class CourseControllerTest extends BaseTest {
         var resString = result.getResponse().getContentAsString(StandardCharsets.UTF_8);
         var res = objectMapper.readValue(resString, new TypeReference<CommonResponse<Boolean>>() {
         });
-        assertThat(res.getStatus()).isEqualTo(EApiStatus.Success.getValue());
-        assertThat(res.getResult()).isEqualTo(EResponseResult.Successful.getValue());
+        assertThat(res.getStatus()).isEqualTo(EStatus.Success.getValue());
+        assertThat(res.getResult()).isEqualTo(EResult.Successful.getValue());
         assertThat(res.getContent()).isTrue();
         assertThat(notificationRepository.count()).isEqualTo(notificationCount + 1);
     }
@@ -455,8 +454,30 @@ class CourseControllerTest extends BaseTest {
         var resString = result.getResponse().getContentAsString(StandardCharsets.UTF_8);
         var response = objectMapper.readValue(resString, new TypeReference<CommonResponse<String>>() {
         });
-        assertThat(response.getResult()).isEqualTo(EResponseResult.Successful.getValue());
-        assertThat(response.getStatus()).isEqualTo(EApiStatus.Success.getValue());
+        assertThat(response.getResult()).isEqualTo(EResult.Successful.getValue());
+        assertThat(response.getStatus()).isEqualTo(EStatus.Success.getValue());
         assertThat(response.getMessage()).isNotNull().isNotBlank();
+    }
+
+    @Test
+    @SneakyThrows
+    void getMembersInCourse() {
+        MvcResult result = mockMvc.perform(get("/course/1/everyone").headers(getAuthHeader()))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andReturn();
+        var res = objectMapper.readValue(result.getResponse().getContentAsString(StandardCharsets.UTF_8), new TypeReference<CommonResponse<MemberCourseResponse>>() {
+        });
+
+        assertThat(res).isNotNull();
+        assertThat(res.getStatus()).isEqualTo(EStatus.Success.getValue());
+        assertThat(res.getResult()).isEqualTo(EResult.Successful.getValue());
+        assertThat(res.getMessage()).isNotNull().isNotBlank();
+        assertThat(res.getContent()).isNotNull();
+        var content = res.getContent();
+        assertThat(content.getTotal()).isEqualTo(6);
+        assertThat(content.getOwner()).isEqualTo("tanhank2k");
+        assertThat(content.getTeachers()).hasSize(1);
+        assertThat(content.getStudents()).hasSize(5);
     }
 }

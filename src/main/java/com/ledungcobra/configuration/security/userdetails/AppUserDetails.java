@@ -1,5 +1,6 @@
 package com.ledungcobra.configuration.security.userdetails;
 
+import com.ledungcobra.common.EUserStatus;
 import com.ledungcobra.user.entity.User;
 import lombok.NonNull;
 import org.springframework.security.core.GrantedAuthority;
@@ -40,7 +41,8 @@ public class AppUserDetails implements UserDetails, Serializable {
 
     @Override
     public boolean isAccountNonLocked() {
-        return true;
+        return user != null &&
+                user.getUserStatus() == EUserStatus.Active.getValue();
     }
 
     @Override
@@ -50,7 +52,7 @@ public class AppUserDetails implements UserDetails, Serializable {
 
     @Override
     public boolean isEnabled() {
-        return true;
+        return user != null && user.getEmailConfirmed() == 1;
     }
 
     public User unwrap() {
