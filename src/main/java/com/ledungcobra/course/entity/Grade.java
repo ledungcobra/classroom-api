@@ -4,7 +4,6 @@ import com.ledungcobra.common.Audit;
 import lombok.*;
 
 import javax.persistence.*;
-import java.util.List;
 
 @Entity
 @Getter
@@ -47,8 +46,10 @@ public class Grade extends Audit {
     @JoinColumn(name = "studentid")
     private Student student;
 
-    @OneToMany
-    @JoinColumn(name = "gradeid")
-    private List<GradeReview> gradeReviews;
+    @OneToOne(mappedBy = "grade")
+    private GradeReview gradeReview;
 
+    public void setIsFinalized(boolean isFinalized) {
+        this.isFinalized = (byte) (isFinalized ? 1 : 0);
+    }
 }

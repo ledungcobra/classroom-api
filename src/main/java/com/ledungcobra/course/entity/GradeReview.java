@@ -27,7 +27,7 @@ public class GradeReview extends Audit {
     @Column(name = "message")
     private String message;
 
-    @ManyToOne
+    @OneToOne
     @JoinColumn(name = "gradeid")
     private Grade grade;
 

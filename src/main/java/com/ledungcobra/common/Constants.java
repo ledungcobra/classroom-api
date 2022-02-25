@@ -7,5 +7,6 @@ public class Constants {
     public static final String USER_ROLE = "ROLE_USER";
     public static final String ADMIN_ROLE = "ROLE_ADMIN";
     public static final String USER_CACHE = "USER_CACHE";
-
+    public static final Integer TYPE_NOTIFICATION_TEACHER = 2;
+    public static final Integer TYPE_NOTIFICATION_STUDENT = 1;
 }

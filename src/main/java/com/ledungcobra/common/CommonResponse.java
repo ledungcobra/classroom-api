@@ -29,4 +29,5 @@ public class CommonResponse<T extends Serializable> implements Serializable {
     public int getResult() {
         return result.getValue();
     }
+
 }

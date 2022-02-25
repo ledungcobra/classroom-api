@@ -30,11 +30,8 @@ public class Assignment extends Audit {
     @Column(name = "maxgrade")
     private Integer maxGrade;
 
-    @Column(name = "order")
+    @Column(name = "`order`")
     private Integer order;
-
-    @Column(name = "gradescale")
-    private Float gradeScale;
 
     @ManyToOne
     @JoinColumn(name = "courseid")

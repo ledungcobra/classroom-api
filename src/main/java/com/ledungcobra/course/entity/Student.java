@@ -5,7 +5,6 @@ import lombok.*;
 
 import javax.persistence.*;
 import java.time.Instant;
-import java.util.Date;
 import java.util.List;
 
 @Table(name = "student")
@@ -49,9 +48,6 @@ public class Student extends Audit {
     @Column(name = "fullname")
     private String fullName;
 
-    @Column(name = "userid")
-    private Integer userId;
-
     @ManyToMany(mappedBy = "students")
     private List<Course> courses;
 
@@ -59,8 +55,5 @@ public class Student extends Audit {
     @JoinTable(name = "assignments_student",
             joinColumns = @JoinColumn(name = "studentid"), inverseJoinColumns = @JoinColumn(name = "assignmentid"))
     private List<Assignment> assignments;
-
-    @OneToMany(mappedBy = "student")
-    private List<StudentNotification> notifications;
 
 }

@@ -1,5 +1,6 @@
 package com.ledungcobra.common;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 public enum ERole {
@@ -14,7 +15,17 @@ public enum ERole {
     }
 
     @JsonProperty
-    public int getRole() {
+    public int getValue() {
         return role;
+    }
+
+    @JsonCreator
+    public static ERole fromInt(Integer value) {
+        return switch (value) {
+            case 0 -> ERole.None;
+            case 1 -> ERole.Teacher;
+            case 2 -> ERole.Student;
+            default -> throw new IllegalStateException("Unexpected value: " + value);
+        };
     }
 }

@@ -5,33 +5,46 @@ import lombok.*;
 
 import javax.persistence.*;
 
-@MappedSuperclass
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@Entity(name = "notification")
+@Builder
 public class Notification extends Audit {
 
     @Id
     @Column(name = "id")
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    protected Integer id;
+    private Integer id;
 
     @Lob
     @Column(name = "message")
-    protected String message;
+    private String message;
 
     @Column(name = "isseen")
-    protected Byte isSeen;
+    private Byte isSeen;
 
     @Column(name = "typenotification")
-    protected Integer typeNotification;
+    private Integer typeNotification;
 
     @Column(name = "userid")
-    protected Integer userId;
+    private Integer userId;
 
     @Lob
     @Column(name = "sendername")
-    protected String senderName;
+    private String senderName;
 
+    @Column(name = "courseid")
+    private Integer courseId;
+
+    @Column(name = "gradeid")
+    private Integer gradeId;
+
+    @Column(name = "gradereviewid")
+    private Integer gradeReviewId;
+
+    public void setIsSeen(boolean isSeen) {
+        this.isSeen = (byte) (isSeen ? 1 : 0);
+    }
 }
