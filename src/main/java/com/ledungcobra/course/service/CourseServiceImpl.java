@@ -274,4 +274,9 @@ public class CourseServiceImpl implements CourseService {
                 .order(numberOfAssignments + 1)
                 .build(), args.getCurrentUser()));
     }
+
+    @Override
+    public List<Integer> getTeacherIds(Integer courseId) {
+        return courseUserRepository.findUserIdsByCourseIdAndRole(courseId,ERole.Teacher.getValue());
+    }
 }

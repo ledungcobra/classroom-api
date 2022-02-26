@@ -1,6 +1,7 @@
 package com.ledungcobra.course.entity;
 
 import com.ledungcobra.common.Audit;
+import com.ledungcobra.common.ETypeNotification;
 import lombok.*;
 
 import javax.persistence.*;
@@ -26,7 +27,8 @@ public class Notification extends Audit {
     private Byte isSeen;
 
     @Column(name = "typenotification")
-    private Integer typeNotification;
+    @Enumerated
+    private ETypeNotification typeNotification;
 
     @Column(name = "userid")
     private Integer userId;

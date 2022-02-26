@@ -16,4 +16,5 @@ public class BeanDeclare {
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder(STRENGTH, new SecureRandom(SEED.getBytes()));
     }
+
 }

@@ -8,8 +8,8 @@ import com.ledungcobra.user.entity.AppRole;
 import com.ledungcobra.user.entity.User;
 import com.ledungcobra.user.oauth2.CustomOAuth2User;
 import com.ledungcobra.user.repository.UserRepository;
-import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -22,15 +22,21 @@ import java.util.UUID;
 import static com.ledungcobra.common.AuditUtils.createAudit;
 
 @Service
-@RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final EntityManager entityManager;
-    private  JwtUtils jwtUtils;
+    private JwtUtils jwtUtils;
+
+    public UserServiceImpl(UserRepository userRepository, PasswordEncoder passwordEncoder, EntityManager entityManager) {
+        this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.entityManager = entityManager;
+    }
 
     @Autowired
+    @Lazy
     public void setJwtUtils(JwtUtils jwtUtils) {
         this.jwtUtils = jwtUtils;
     }

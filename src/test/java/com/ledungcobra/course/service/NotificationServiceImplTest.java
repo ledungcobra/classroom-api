@@ -21,7 +21,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@ActiveProfiles({"default","test"})
+@ActiveProfiles({"default", "test"})
 @FlywayTest
 @ComponentScan(basePackages = {
         "com.ledungcobra.user",
@@ -79,5 +79,11 @@ class NotificationServiceImplTest {
         assertThat(notification.getCourseId()).isEqualTo(args.getCourseId());
         assertThat(notification.getCreateBy()).isEqualTo(args.getCurrentUser());
         assertThat(notificationRepository.count()).isEqualTo(count + 1);
+    }
+
+    @Test
+    void countByUserId() {
+        long count = notificationRepository.countByUserId(1);
+        log.info("Count {}", count);
     }
 }

@@ -1,13 +1,18 @@
 package com.ledungcobra.course.service;
 
 import com.ledungcobra.common.AuditUtils;
-import com.ledungcobra.common.Constants;
+import com.ledungcobra.common.ERole;
+import com.ledungcobra.common.ETypeNotification;
+import com.ledungcobra.course.entity.GradeReview;
 import com.ledungcobra.course.entity.Notification;
+import com.ledungcobra.course.entity.Student;
+import com.ledungcobra.course.repository.CourseUserRepository;
 import com.ledungcobra.course.repository.GradeRepository;
 import com.ledungcobra.course.repository.NotificationRepository;
 import com.ledungcobra.dto.common.CreateStudentNotificationSingleArgs;
 import com.ledungcobra.dto.common.CreateStudentNotificationsArgs;
 import com.ledungcobra.dto.common.StudentIdStudentCode;
+import com.ledungcobra.exception.NotFoundException;
 import com.ledungcobra.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
@@ -23,6 +28,7 @@ public class NotificationServiceImpl implements NotificationService {
     private final UserRepository userRepository;
     private final NotificationRepository notificationRepository;
     private final GradeRepository gradeRepository;
+    private final CourseUserRepository courseUserRepository;
 
     @Override
     public List<Notification> createStudentNotifications(CreateStudentNotificationsArgs args) {
@@ -38,7 +44,7 @@ public class NotificationServiceImpl implements NotificationService {
                         .gradeReviewId(args.getGradeReviewId())
                         .userId(u.getId())
                         .isSeen((byte) 0)
-                        .typeNotification(Constants.TYPE_NOTIFICATION_STUDENT)
+                        .typeNotification(ETypeNotification.ForStudent)
                         .build())
                 .map(n -> notificationRepository.save(AuditUtils.createAudit(n, args.getCurrentUser())))
                 .toList();
@@ -53,7 +59,7 @@ public class NotificationServiceImpl implements NotificationService {
                 .gradeId(args.getGradeId())
                 .gradeReviewId(args.getGradeReviewId())
                 .userId(u.getId())
-                .typeNotification(Constants.TYPE_NOTIFICATION_STUDENT)
+                .typeNotification(ETypeNotification.ForStudent)
                 .build();
         notification.setIsSeen(false);
         return notificationRepository.save(AuditUtils.createAudit(notification, args.getCurrentUser()));
@@ -88,5 +94,30 @@ public class NotificationServiceImpl implements NotificationService {
     @Override
     public void updateBatch(List<Notification> notifications) {
         notificationRepository.saveAll(notifications);
+    }
+
+    @Override
+    public List<Notification> createRequestGradeReviewNotification(String currentUser, GradeReview gradeReview, String reason, Student student) throws NotFoundException {
+        var grade = gradeReview.getGrade();
+        if (grade == null) throw new NotFoundException("Not found grade for grade review id = " + gradeReview.getId());
+        var assignment = grade.getAssigment();
+        if (assignment == null) throw new NotFoundException("Not found assignment for grade id = " + grade.getId());
+        var course = assignment.getCourse();
+        if (course == null) throw new NotFoundException("Not found course for assignment id " + assignment.getId());
+        var teachers = courseUserRepository.findUserByCourseIdAndRole(course.getId(), ERole.Teacher.getValue());
+        List<Notification> notifications = teachers.stream().map(t -> {
+            var notification = Notification.builder()
+                    .message(reason)
+                    .userId(t.getId())
+                    .courseId(course.getId())
+                    .gradeId(grade.getId())
+                    .gradeReviewId(gradeReview.getId())
+                    .senderName(student.getFullName())
+                    .isSeen((byte) 0)
+                    .typeNotification(ETypeNotification.ForTeacher)
+                    .build();
+            return AuditUtils.createAudit(notification, currentUser);
+        }).toList();
+        return notificationRepository.saveAll(notifications);
     }
 }

@@ -4,6 +4,7 @@ import com.ledungcobra.configuration.security.userdetails.AppUserDetails;
 import com.ledungcobra.user.service.UserService;
 import io.jsonwebtoken.*;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Component;
@@ -26,9 +27,10 @@ public class JwtUtils {
     @Value("${spring.security.jwt.expired-in-seconds}")
     private Integer jwtExpiredInSeconds;
 
-    private final UserService userService;
+    private  UserService userService;
 
-    public JwtUtils(UserService userService) {
+    @Autowired
+    public void setUserService(UserService userService) {
         this.userService = userService;
     }
 

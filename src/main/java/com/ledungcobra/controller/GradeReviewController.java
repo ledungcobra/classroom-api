@@ -1,24 +1,44 @@
 package com.ledungcobra.controller;
 
-import com.ledungcobra.common.CommonResponse;
-import com.ledungcobra.common.EResult;
-import com.ledungcobra.common.ERole;
-import com.ledungcobra.common.EStatus;
+import com.ledungcobra.common.*;
+import com.ledungcobra.configuration.security.jwt.JwtUtils;
+import com.ledungcobra.course.entity.Grade;
+import com.ledungcobra.course.entity.GradeReview;
+import com.ledungcobra.course.entity.ReviewComment;
 import com.ledungcobra.course.repository.CourseUserRepository;
 import com.ledungcobra.course.repository.GradeRepository;
 import com.ledungcobra.course.repository.StudentRepository;
 import com.ledungcobra.course.service.CourseService;
 import com.ledungcobra.course.service.GradeReviewService;
+import com.ledungcobra.course.service.NotificationService;
+import com.ledungcobra.dto.common.CreateStudentNotificationSingleArgs;
 import com.ledungcobra.dto.gradereview.GradeReviewResponse.GradeResponse;
 import com.ledungcobra.dto.gradereview.GradeReviewResponse.GradeReviewResponse;
 import com.ledungcobra.dto.gradereview.GradeReviewResponse.StudentResponse;
+import com.ledungcobra.dto.gradereview.GradeReviewValidatorArgs;
+import com.ledungcobra.dto.gradereview.deleteGradeReview.DeleteGradeReviewRequest;
+import com.ledungcobra.dto.gradereview.deleteStudentDeleteComment.DeleteStudentCommentRequest;
+import com.ledungcobra.dto.gradereview.deleteTeacherTeacherComment.DeleteTeacherCommentRequest;
 import com.ledungcobra.dto.gradereview.getGradeReviewComments.ReviewCommentResponse;
+import com.ledungcobra.dto.gradereview.postApproveGradeReview.ApprovalGradeReviewRequest;
+import com.ledungcobra.dto.gradereview.postApproveGradeReview.ApproveGradeReviewResponse;
+import com.ledungcobra.dto.gradereview.postCreateGradeReview.CreateGradeReviewRequest;
+import com.ledungcobra.dto.gradereview.postStudentComment.CreateStudentCommentRequest;
+import com.ledungcobra.dto.gradereview.postTeacherComment.CreateTeacherCommentRequest;
+import com.ledungcobra.dto.gradereview.putStudentUpdateComment.StudentUpdateCommentRequest;
+import com.ledungcobra.dto.gradereview.putTeacherUpdateComment.UpdateCommentRequest;
+import com.ledungcobra.dto.gradereview.putUpdateGradeReview.UpdateGradeReviewRequest;
+import com.ledungcobra.dto.user.register.UserResponse;
+import com.ledungcobra.exception.NotFoundException;
+import com.ledungcobra.user.entity.User;
 import com.ledungcobra.user.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import javax.servlet.http.HttpServletRequest;
 import java.io.Serializable;
 import java.util.Objects;
 
@@ -28,6 +48,7 @@ import static org.springframework.http.ResponseEntity.ok;
 @RestController
 @RequestMapping("/grade-review")
 @RequiredArgsConstructor
+@Slf4j
 public class GradeReviewController {
 
     private final UserService userService;
@@ -36,23 +57,16 @@ public class GradeReviewController {
     private final CourseUserRepository courseUserRepository;
     private final GradeReviewService gradeReviewService;
     private final GradeRepository gradeRepository;
+    private final JwtUtils jwtUtils;
+    private final NotificationService notificationService;
 
     // TODO Testing
     @GetMapping("")
     @SneakyThrows
-    public ResponseEntity<?> getGradeReview(@RequestParam("CourseId") Integer courseId,
-                                            @RequestParam("GradeId") Integer gradeId,
-                                            @RequestParam("GradeReviewId") Integer gradeReviewId,
-                                            @RequestParam("CurrentUser") String currentUser
-    ) {
+    public ResponseEntity<?> getGradeReview(@RequestParam("CourseId") Integer courseId, @RequestParam("GradeId") Integer gradeId, @RequestParam("GradeReviewId") Integer gradeReviewId, @RequestParam("CurrentUser") String currentUser) {
 
         if (!validateGradeReviewOfUser(currentUser, courseId, ERole.None, false, gradeId, gradeReviewId)) {
-            return ok(CommonResponse.builder()
-                    .status(EStatus.Success)
-                    .result(EResult.Successful)
-                    .content("")
-                    .message("Permission denied for getting grade review ")
-                    .build());
+            return ok(CommonResponse.builder().status(EStatus.Success).result(EResult.Successful).content("").message("Permission denied for getting grade review ").build());
         }
 
         var gradeReview = gradeReviewService.findById(gradeReviewId);
@@ -62,16 +76,14 @@ public class GradeReviewController {
         response.setGrade(new GradeResponse(grade));
         response.setExerciseName(grade.getAssigment() != null ? grade.getAssigment().getName() : "");
         response.setStudent(new StudentResponse(grade.getStudent()));
-        return ok(CommonResponse.builder()
-                .result(EResult.Successful)
-                .status(EStatus.Success)
-                .content(response)
-                .message("Get grade review success")
-                .build());
+        return ok(CommonResponse.builder().result(EResult.Successful).status(EStatus.Success).content(response).message("Get grade review success").build());
     }
 
-    private boolean validateGradeReviewOfUser(String currentUser, Integer courseId,
-                                              ERole role, boolean isCheckOwner, Integer gradeId, int gradeReviewId) {
+    private boolean validateGradeReviewOfUser(String currentUser, GradeReviewValidatorArgs validatorArgs, ERole role, boolean isCheckOwner) {
+        return validateGradeReviewOfUser(currentUser, validatorArgs.getCourseId(), role, isCheckOwner, validatorArgs.getGradeId(), validatorArgs.getGradeReviewId());
+    }
+
+    private boolean validateGradeReviewOfUser(String currentUser, Integer courseId, ERole role, boolean isCheckOwner, Integer gradeId, int gradeReviewId) {
         var user = userService.findByUsername(currentUser);
         if (user == null) return false;
 
@@ -85,10 +97,7 @@ public class GradeReviewController {
                 if (courseUser == null) return false;
 
                 var gradeReview = gradeReviewService.findById(gradeReviewId);
-                if (gradeReview == null ||
-                        (courseUser.getRole().getId() == ERole.Student.getValue() &&
-                                !Objects.equals(student.getId(), gradeReview.getStudent() != null ? gradeReview.getStudent().getStudentId() : null))
-                ) {
+                if (gradeReview == null || (courseUser.getRole().getId() == ERole.Student.getValue() && !Objects.equals(student.getId(), gradeReview.getStudent() != null ? gradeReview.getStudent().getStudentId() : null))) {
                     return false;
                 }
             }
@@ -114,79 +123,412 @@ public class GradeReviewController {
     }
 
 
+    // TODO TESTING
     @PostMapping("")
-    public ResponseEntity<?> postCreateGradeReview() {
-        return null;
+    public ResponseEntity<?> postCreateGradeReview(@RequestBody CreateGradeReviewRequest request, HttpServletRequest httpServletRequest) throws NotFoundException {
+        var currentUser = jwtUtils.getUserNameFromRequest(httpServletRequest);
+        var user = AuthenticationUtils.appUserDetails().unwrap();
+        var badRequest = ok(CommonResponse.builder().status(EStatus.Error).result(EResult.Error)
+                .content("").message("Create grade review failed!!").build());
+        if (!validateGradeReviewOfUser(currentUser, request.getCourseId(), ERole.Student, false, request.getGradeId(), 0) || user == null) {
+            return badRequest;
+        }
+        var student = studentRepository.findByStudentId(user.getStudentID());
+        if (student == null) {
+            return badRequest;
+        }
+        var gradeReview = gradeReviewService.createGradeReview(request.getGradeId(), request.getGradeExpect(), student.getId(), request.getReason(), currentUser);
+        var notificationMsg = String.format("%s create new grade review for %s",
+                (gradeReview.getStudent() != null ? gradeReview.getStudent().getFullName() : ""),
+                gradeReview.getGrade() == null ? "" : (gradeReview.getGrade().getAssigment() == null ? "" : gradeReview.getGrade().getAssigment().getName())
+        );
+        var notifications = notificationService
+                .createRequestGradeReviewNotification(currentUser, gradeReview, notificationMsg, student);
+
+        //TODO SOCKET
+        log.info("Socket {}", notifications);
+        var response = new GradeReviewResponse(gradeReview);
+        response.setGrade(new GradeResponse(gradeReview.getGrade()));
+        response.setExerciseName(gradeReview.getGrade().getAssigment() != null ? gradeReview.getGrade().getAssigment().getName() : "");
+        response.setStudent(new StudentResponse(student));
+        return ok(CommonResponse.builder()
+                .status(EStatus.Success)
+                .result(EResult.Successful)
+                .message("Create new grade review successfully")
+                .content(response)
+                .build());
     }
+
+    // TODO TESTING
+    @PostMapping("/approval")
+    public ResponseEntity<?> postApproveGradeReview(@RequestBody ApprovalGradeReviewRequest request,
+                                                    HttpServletRequest httpServletRequest
+    ) throws NotFoundException {
+        var user = AuthenticationUtils.appUserDetails().unwrap();
+        var badRequest = ok(CommonResponse.builder().status(EStatus.Error).result(EResult.Error)
+                .content("").message("Approve grade review fail").build());
+        var currentUser = jwtUtils.getUserNameFromRequest(httpServletRequest);
+        if (!validateGradeReviewOfUser(currentUser, request.getCourseId(), ERole.Teacher, false, request.getGradeId(), request.getGradeReviewId())) {
+            return badRequest;
+        }
+        gradeReviewService.approveGradeReview(request.getApprovalStatus(), request.getGradeReviewId(), request.getCurrentUser());
+        var res = ok(CommonResponse.builder()
+                .status(EStatus.Success)
+                .result(EResult.Successful)
+                .message(String.format("Update sattus for grade review id = %s successfully", request.getGradeReviewId()))
+                .content(ApproveGradeReviewResponse.builder()
+                        .gradeReviewId(request.getGradeReviewId())
+                        .status(request.getApprovalStatus())
+                        .build())
+                .build());
+        GradeReview gradeReview = gradeReviewService.findById(request.getGradeReviewId());
+        var studentId = userService.findByStudentCode(gradeReview.getStudent().getStudentId());
+        var teachers = courseService.getTeachers(gradeReview.getGrade().getAssigment().getCourse().getId());
+        for (UserResponse teacher : teachers) {
+            if (!Objects.equals(user.getId(), teacher.getId())) {
+                // TODO SOCKET to teacher
+            }
+        }
+
+        // TODO Socket to approval
+        log.info("Socket to {}", studentId);
+        return res;
+    }
+
 
     // TODO TEsting
     @GetMapping("/comments")
-    public ResponseEntity<?> getGradeReviewComments(@RequestParam("CourseId") Integer courseId,
-                                                    @RequestParam("GradeId") Integer gradeId,
-                                                    @RequestParam("GradeReviewId") Integer gradeReviewId,
-                                                    @RequestParam("CurrentUser") String currentUser) {
+    public ResponseEntity<?> getGradeReviewComments(@RequestParam("CourseId") Integer courseId, @RequestParam("GradeId") Integer gradeId, @RequestParam("GradeReviewId") Integer gradeReviewId, @RequestParam("CurrentUser") String currentUser) {
         if (!validateGradeReviewOfUser(currentUser, courseId, ERole.None, false, gradeId, gradeReviewId)) {
-            return ok(CommonResponse.builder()
-                    .status(EStatus.Success)
-                    .result(EResult.Successful)
-                    .content("")
-                    .message("Permission denied for getting grade review comments")
-                    .build());
+            return ok(CommonResponse.builder().status(EStatus.Error).result(EResult.Error).content("").message("Permission denied for getting grade review comments").build());
         }
 
         var comments = gradeReviewService.findAllCommentsByGradeReview(gradeReviewId);
         var response = comments.stream().map(ReviewCommentResponse::new).toList();
+        return ok(CommonResponse.builder().status(EStatus.Success).result(EResult.Successful).content((Serializable) response).message("Get comment for grade review successfully").build());
+    }
+
+
+    // TODO TESTING
+    @PutMapping("/update")
+    public ResponseEntity<?> putUpdateGradeReview(HttpServletRequest httpServletRequest,
+                                                  @RequestBody UpdateGradeReviewRequest request) {
+        var user = AuthenticationUtils.appUserDetails().unwrap();
+        var currentUser = jwtUtils.getUserNameFromRequest(httpServletRequest);
+        if (!validateGradeReviewOfUser(currentUser, request.getCourseId(), ERole.Teacher, false,
+                request.getGradeId(), request.getGradeReviewId())) {
+            return ok(CommonResponse.builder().status(EStatus.Error).result(EResult.Error).content("").message("Permission denied for updating grade review").build());
+        }
+        var gradeReview = gradeReviewService.findGradeReviewByIdAndCreateByAndStatus(request.getGradeReviewId(), user.getUserName(), EGradeReviewStatus.Pending.getValue());
+        if (gradeReview == null) {
+            return ok(CommonResponse.builder()
+                    .status(EStatus.Error)
+                    .result(EResult.Error)
+                    .content("")
+                    .message("Update grade review failed !!")
+                    .build());
+        }
+        gradeReview.setGradeExpect(request.getGradeExpect());
+        gradeReview.setMessage(request.getReason());
+        var updatedGradeReview = gradeReviewService.update(gradeReview, currentUser);
+        var response = new GradeReviewResponse(updatedGradeReview);
+        var student = gradeReview.getStudent();
+        response.setGrade(new GradeResponse(updatedGradeReview.getGrade()));
+        response.setExerciseName(updatedGradeReview.getGrade().getAssigment().getName());
+        response.setStudent(new StudentResponse(student));
         return ok(CommonResponse.builder()
                 .status(EStatus.Success)
                 .result(EResult.Successful)
-                .content((Serializable) response)
-                .message("Get comment for grade review successfully")
+                .content(response)
+                .message("Update grade review successfully")
                 .build());
     }
 
-    @PostMapping("/approval")
-    public ResponseEntity<?> postApproveGradeReview() {
-        return null;
-    }
-
-    @PutMapping("/update")
-    public ResponseEntity<?> putUpdateGradeReview() {
-        return null;
-    }
-
+    // TODO Testing
     @DeleteMapping("/delete")
-    public ResponseEntity<?> deleteGradeReview() {
-        return null;
+    public ResponseEntity<?> deleteGradeReview(HttpServletRequest httpRequest,
+                                               @RequestBody DeleteGradeReviewRequest request) {
+        var user = AuthenticationUtils.appUserDetails().unwrap();
+        var currentUser = jwtUtils.getUserNameFromRequest(httpRequest);
+        var badRequest = ok(CommonResponse.builder()
+                .status(EStatus.Error)
+                .result(EResult.Error)
+                .content("")
+                .message("Delete grade review failed !!")
+                .build());
+        if (!validateGradeReviewOfUser(currentUser, request.getCourseId(), ERole.Student, true, request.getGradeId(), request.getGradeReviewId())) {
+            return badRequest;
+        }
+        var gradeReview = gradeReviewService.findGradeReviewByIdAndCreateByAndStatus(request.getGradeReviewId(), currentUser, EGradeReviewStatus.Pending.getValue());
+        if (gradeReview == null) {
+            return badRequest;
+        }
+        gradeReviewService.delete(gradeReview);
+        // TODO Socket
+        var res = ok(CommonResponse.builder()
+                .status(EStatus.Success)
+                .result(EResult.Successful)
+                .content(request.getGradeReviewId())
+                .message("Delete grade review successfully")
+                .build());
+        log.info("Socket {}", res);
+        return res;
     }
 
+    // TODO TESTING
     @PostMapping("/teacher-comment")
-    public ResponseEntity<?> postTeacherComment() {
-        return null;
+    public ResponseEntity<?> postTeacherComment(@RequestBody CreateTeacherCommentRequest request, HttpServletRequest httpServletRequest) {
+        var currentUser = jwtUtils.getUserNameFromRequest(httpServletRequest);
+        var user = AuthenticationUtils.appUserDetails().unwrap();
+        if (!validateGradeReviewOfUser(currentUser, request.getCourseId(), ERole.Teacher, false, request.getGradeId(), request.getGradeReviewId())) {
+            return ok(CommonResponse.builder()
+                    .status(EStatus.Error)
+                    .result(EResult.Error)
+                    .content("")
+                    .message("Permission denied for teacher create comment!!")
+                    .build());
+        }
+        var reviewComment = gradeReviewService.createReviewComment(request.getGradeReviewId(), request.getMessage(), user.getId(), 0, currentUser);
+        var gradeReview = reviewComment.getGradeReview();
+        Grade grade = reviewComment.getGradeReview().getGrade();
+        var assignment = grade.getAssigment();
+        var student = grade.getStudent();
+        notificationService.createStudentNotification(CreateStudentNotificationSingleArgs.builder()
+                .gradeReviewId(gradeReview.getId())
+                .courseId(request.getCourseId())
+                .gradeId(grade.getId())
+                .studentId(student.getStudentId())
+                .message(String.format("%s bình luận trong yêu cầu sửa điểm của bài tập tên: %s", user.getNormalizedDisplayName(), assignment.getName()))
+                .build());
+        var response = new ReviewCommentResponse(reviewComment);
+        response.setTeacher(new UserResponse(user));
+        User studentUser = userService.findByStudentCode(student.getStudentId());
+        // TODO SOCKET
+        log.info("Socket {}", studentUser.getId());
+        var teachers = courseService.getTeacherIds(request.getCourseId());
+        for (Integer teacherId : teachers) {
+            if (teacherId != user.getId()) {
+                // TODO SOCKET
+                log.info("SOCKET {}", teacherId);
+            }
+        }
+
+        return ok(CommonResponse.builder()
+                .status(EStatus.Success)
+                .result(EResult.Successful)
+                .content(response)
+                .message("Create new comment review successfully")
+                .build());
     }
 
+    // TODO TESTING
     @PutMapping("/teacher-comment/update")
-    public ResponseEntity<?> putTeacherUpdateComment() {
-        return null;
+    public ResponseEntity<?> putTeacherUpdateComment(HttpServletRequest httpServletRequest,
+                                                     @RequestBody UpdateCommentRequest request) {
+        var currentUser = jwtUtils.getUserNameFromRequest(httpServletRequest);
+        var user = AuthenticationUtils.appUserDetails().unwrap();
+
+        if (!validateGradeReviewOfUser(currentUser, request.getCourseId(), ERole.Teacher, false, request.getGradeId(), request.getGradeReviewId())) {
+            return ok(CommonResponse.builder()
+                    .status(EStatus.Error)
+                    .result(EResult.Error)
+                    .content("")
+                    .message("Permission denied for teacher update comment!!")
+                    .build());
+        }
+
+        var reviewComment = gradeReviewService.findReviewCommentById(request.getReviewCommentId());
+        if (reviewComment == null) {
+            return ok(CommonResponse.builder()
+                    .status(EStatus.Error)
+                    .result(EResult.Error)
+                    .content("")
+                    .message("Permission denied for teacher update comment because of not found reviewCommnet id " + request.getReviewCommentId())
+                    .build());
+        }
+        reviewComment.setMessage(request.getMessage());
+        var updatedComment = gradeReviewService.update(reviewComment, currentUser);
+        var response = new ReviewCommentResponse(updatedComment);
+        var res = ok(CommonResponse.builder()
+                .status(EStatus.Success)
+                .result(EResult.Successful)
+                .content(response)
+                .message("Update comment success")
+                .build());
+        var studentId = userService.findByStudentCode(reviewComment.getGradeReview().getStudent().getStudentId()).getId();
+        // TODO Socket
+        log.info("Message service {}", studentId);
+        var teachers = courseService.getTeacherIds(request.getCourseId());
+        for (Integer teacherId : teachers) {
+            if (!Objects.equals(teacherId, user.getId())) {
+                // TODO Socket
+                log.info("Message service {} update comment ", teacherId);
+            }
+        }
+
+        return res;
     }
 
+    // TODO TESTING
     @DeleteMapping("/teacher-comment/delete")
-    public ResponseEntity<?> deleteTeacherTeacherComment() {
-        return null;
+    public ResponseEntity<?> deleteTeacherTeacherComment(HttpServletRequest httpServletRequest,
+                                                         @RequestBody DeleteTeacherCommentRequest request) {
+        var user = AuthenticationUtils.appUserDetails().unwrap();
+        var currentUser = jwtUtils.getUserNameFromRequest(httpServletRequest);
+        if (!validateGradeReviewOfUser(currentUser, request.getCourseId(), ERole.Teacher, false, request.getGradeId(), request.getGradeReviewId())) {
+            return ok(CommonResponse.builder()
+                    .status(EStatus.Error)
+                    .result(EResult.Error)
+                    .content("")
+                    .message("Permission denied for teacher update comment!!")
+                    .build());
+        }
+
+        var reviewComment = gradeReviewService.findReviewCommentById(request.getReviewCommentId());
+        if (reviewComment == null || Objects.equals(reviewComment.getCreateBy(), currentUser)) {
+            return ok(CommonResponse.builder()
+                    .status(EStatus.Error)
+                    .result(EResult.Error)
+                    .content("")
+                    .message("Permission denied for teacher update comment because of not found grade review comment id " + request.getGradeReviewId())
+                    .build());
+        }
+
+        gradeReviewService.delete(reviewComment);
+        var res = ok(CommonResponse.builder()
+                .status(EStatus.Success)
+                .result(EResult.Successful)
+                .content(request.getReviewCommentId())
+                .message("Delete comment review successfully")
+                .build());
+        var studentId = userService.findByStudentCode(reviewComment.getStudent().getStudentId()).getId();
+        // TODO SOCKET
+        log.info("Socket {}", studentId);
+        var teachers = courseService.getTeacherIds(request.getCourseId());
+        for (Integer teacherId : teachers) {
+            if (!Objects.equals(teacherId, user.getId())) {
+                // TODO socket
+                log.info("Socket {}", teacherId);
+            }
+        }
+        return res;
     }
 
+    // TODO Testing
     @PostMapping("/student-comment")
-    public ResponseEntity<?> postStudentComment() {
-        return null;
-    }
+    public ResponseEntity<?> postStudentComment(@RequestBody CreateStudentCommentRequest request, HttpServletRequest httpServletRequest) throws NotFoundException {
+        var currentUser = jwtUtils.getUserNameFromRequest(httpServletRequest);
+        var user = AuthenticationUtils.appUserDetails().unwrap();
+        if (!validateGradeReviewOfUser(currentUser, request, ERole.Student, false)) {
+            return ok(CommonResponse.builder()
+                    .status(EStatus.Error)
+                    .result(EResult.Error)
+                    .content("")
+                    .message("Permission denied for student create comment!!")
+                    .build());
+        }
+        var student = studentRepository.findByStudentId(user.getStudentID());
+        ReviewComment reviewComment = gradeReviewService.createReviewComment(request.getGradeReviewId(), request.getMessage(), 0, student.getId(), currentUser);
+        var gradeReview = reviewComment.getGradeReview();
+        var grade = gradeReview.getGrade();
+        var assignment = grade.getAssigment();
+        var msg = String.format("%s bình luận grade review cho assignment %s", student.getFullName(), assignment.getName());
+        notificationService.createRequestGradeReviewNotification(currentUser, gradeReview, msg, student);
+        var response = new ReviewCommentResponse(reviewComment);
+        var teachers = courseService.getTeacherIds(request.getCourseId());
+        for (Integer teacherId : teachers) {
+            if (Objects.equals(teacherId, user.getId())) {
+                // TODO SOCKET
+                log.info("Send notification to socket {}", teacherId);
+            }
+        }
 
+        return ok(CommonResponse.builder()
+                .status(EStatus.Success)
+                .result(EResult.Successful)
+                .content(response)
+                .message("Create new comment successfully")
+                .build());
+    }
+    // TODO Testing
     @PutMapping("/student-comment/update")
-    public ResponseEntity<?> putStudentUpdateComment() {
-        return null;
+    public ResponseEntity<?> putStudentUpdateComment(@RequestBody StudentUpdateCommentRequest request,
+                                                     HttpServletRequest httpServletRequest) {
+        var currentUser = jwtUtils.getUserNameFromRequest(httpServletRequest);
+        var user = AuthenticationUtils.appUserDetails().unwrap();
+        if (!validateGradeReviewOfUser(currentUser, request, ERole.Student, false)) {
+            return ok(CommonResponse.builder()
+                    .status(EStatus.Error)
+                    .result(EResult.Error)
+                    .content("")
+                    .message("Permission denied for student update comment!!")
+                    .build());
+        }
+        var reviewComment = gradeReviewService.findReviewCommentById(request.getReviewCommentId());
+        if (reviewComment == null) {
+            return ok(CommonResponse.builder()
+                    .status(EStatus.Error)
+                    .result(EResult.Error)
+                    .content("")
+                    .message("Permission denied for student update comment because of not found review comment for id " + request.getReviewCommentId())
+                    .build());
+        }
+        reviewComment.setMessage(request.getMessage());
+        var updatedComment = gradeReviewService.update(reviewComment, currentUser);
+        var response = new ReviewCommentResponse(updatedComment);
+        var res = ok(CommonResponse.builder()
+                .status(EStatus.Success)
+                .result(EResult.Successful)
+                .content(response)
+                .message("Update comment review successfully")
+                .build());
+        var teachers = courseService.getTeacherIds(request.getCourseId());
+        for (Integer teacherId : teachers) {
+            if (Objects.equals(teacherId, user.getId())) {
+                // TODO Socket
+                log.info("Socket {}", teacherId);
+            }
+        }
+        return res;
     }
 
+    // TODO Testing
     @DeleteMapping("/student-comment/delete")
-    public ResponseEntity<?> deleteStudentDeleteComment() {
-        return null;
+    public ResponseEntity<?> deleteStudentDeleteComment(HttpServletRequest httpServletRequest,
+                                                        @RequestBody DeleteStudentCommentRequest request) {
+        var user = AuthenticationUtils.appUserDetails().unwrap();
+        var currentUser = jwtUtils.getUserNameFromRequest(httpServletRequest);
+        if (!validateGradeReviewOfUser(currentUser, request, ERole.Student, false)) {
+            return ok(CommonResponse.builder()
+                    .status(EStatus.Error)
+                    .result(EResult.Error)
+                    .content("")
+                    .message("Permission denied for student delete comment!!")
+                    .build());
+        }
+        var reviewComment = gradeReviewService.findReviewCommentById(request.getReviewCommentId());
+        if (reviewComment == null) {
+            return ok(CommonResponse.builder()
+                    .status(EStatus.Error)
+                    .result(EResult.Error)
+                    .content("")
+                    .message("Not found review comment by id !!" + request.getReviewCommentId())
+                    .build());
+        }
+        gradeReviewService.delete(reviewComment);
+        var res = ok(CommonResponse.builder()
+                .status(EStatus.Success)
+                .result(EResult.Successful)
+                .content(request.getReviewCommentId())
+                .message("Delete review comment successfully")
+                .build());
+        var teachers = courseService.getTeacherIds(request.getCourseId());
+        for (Integer teacherId : teachers) {
+            if (Objects.equals(teacherId, user.getId())) {
+                // Delete socket
+                log.info("Delete comment {}", teacherId);
+            }
+        }
+        return res;
     }
-
 }

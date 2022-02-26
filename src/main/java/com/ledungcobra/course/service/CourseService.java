@@ -68,4 +68,6 @@ public interface CourseService {
     void updateRole(CourseUser courseUser, Integer role, String currentUser);
 
     Assignment createAssignment(CreateNewAssignmentArgs args);
+
+    List<Integer> getTeacherIds(Integer courseId);
 }

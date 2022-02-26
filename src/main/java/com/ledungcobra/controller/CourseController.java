@@ -219,10 +219,6 @@ public class CourseController {
         return validateUserInClass(username, courseId, role, false);
     }
 
-    private boolean validateUserInClass(String username, int courseId) {
-        return validateUserInClass(username, courseId, ERole.None, false);
-    }
-
     @DeleteMapping("/{id}/assignments/{assignmentId}")
     public ResponseEntity<?> deleteAssignment(@PathVariable("id") Integer courseId, @PathVariable("assignmentId") Integer assignmentId, HttpServletRequest httpRequest, @RequestParam("currentUser") String currentUser) {
         var username = jwtUtils.getUserNameFromRequest(httpRequest);

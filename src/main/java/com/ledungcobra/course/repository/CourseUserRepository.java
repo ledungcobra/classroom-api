@@ -19,4 +19,7 @@ public interface CourseUserRepository extends JpaRepository<CourseUser, Integer>
 
     @Query("FROM  CourseUser cu where cu.user.id = ?1 and cu.course.id = ?2")
     CourseUser findCourseUserByUserIdAndCourseId(Integer userId, Integer courseId);
+
+    @Query("select cu.user.id From CourseUser  cu where cu.course.id = ?1 and cu.role.id = ?2")
+    List<Integer> findUserIdsByCourseIdAndRole(Integer courseId, int role);
 }

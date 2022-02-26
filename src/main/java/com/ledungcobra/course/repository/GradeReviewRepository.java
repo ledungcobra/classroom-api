@@ -4,4 +4,5 @@ import com.ledungcobra.course.entity.GradeReview;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface GradeReviewRepository extends JpaRepository<GradeReview, Integer> {
+    GradeReview findByIdAndCreateByAndStatus(Integer gradeReviewId, String createBy, int status);
 }
