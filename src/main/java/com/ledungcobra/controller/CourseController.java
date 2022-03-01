@@ -2,11 +2,10 @@ package com.ledungcobra.controller;
 
 import com.ledungcobra.common.*;
 import com.ledungcobra.configuration.security.jwt.JwtUtils;
-import com.ledungcobra.course.entity.Assignment;
-import com.ledungcobra.course.entity.Course;
-import com.ledungcobra.course.entity.Grade;
-import com.ledungcobra.course.entity.Student;
+import com.ledungcobra.configuration.websocket.WsNotificationController;
+import com.ledungcobra.course.entity.*;
 import com.ledungcobra.course.repository.AssignmentRepository;
+import com.ledungcobra.course.repository.CourseStudentRepository;
 import com.ledungcobra.course.repository.CourseUserRepository;
 import com.ledungcobra.course.repository.StudentRepository;
 import com.ledungcobra.course.service.CourseService;
@@ -17,10 +16,13 @@ import com.ledungcobra.dto.course.createNewAssignment.CreateNewAssignmentArgs;
 import com.ledungcobra.dto.course.createNewAssignment.CreateNewAssignmentsRequest;
 import com.ledungcobra.dto.course.getAllGrades.GradeResponseWrapper;
 import com.ledungcobra.dto.course.getAllGrades.GradeSimpleResponse;
+import com.ledungcobra.dto.course.getAssignmentsOfCourse.AssignmentResponse;
+import com.ledungcobra.dto.course.getAssignmentsOfCourse.AssignmentWrapper;
+import com.ledungcobra.dto.course.getCourseById.CourseResponse;
+import com.ledungcobra.dto.course.getCourseById.CourseWrapperResponse;
 import com.ledungcobra.dto.course.getGradeByStudent.SingleStudentGradeResponse;
 import com.ledungcobra.dto.course.getMembersInCourse.MemberCourseResponse;
-import com.ledungcobra.dto.course.index.CourseResponse;
-import com.ledungcobra.dto.course.index.CourseWrapper;
+import com.ledungcobra.dto.course.index.CourseListWrapper;
 import com.ledungcobra.dto.course.postCreateCourse.CreateCourseRequest;
 import com.ledungcobra.dto.course.postSortAssignment.SortAssignmentRequest;
 import com.ledungcobra.dto.course.postUpdateAssignmentNormal.UpdateGradeNormalRequest;
@@ -30,14 +32,13 @@ import com.ledungcobra.dto.course.removeMember.RemoveMemberInCourseRequest;
 import com.ledungcobra.dto.course.updateAssigment.UpdateAssignmentsRequest;
 import com.ledungcobra.dto.course.updateRoleMember.UpdateRoleMemberInCourseRequest;
 import com.ledungcobra.dto.email.postSendMail.SendMailJoinToCourseRequest;
-import com.ledungcobra.dto.course.getAssignmentsOfCourse.AssignmentResponse;
-import com.ledungcobra.dto.course.getAssignmentsOfCourse.AssignmentWrapper;
 import com.ledungcobra.exception.NotFoundException;
 import com.ledungcobra.mail.EmailService;
 import com.ledungcobra.user.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.xssf.usermodel.XSSFRow;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
@@ -47,6 +48,7 @@ import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.annotation.Secured;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
@@ -60,12 +62,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
-import static org.springframework.http.ResponseEntity.badRequest;
-import static org.springframework.http.ResponseEntity.ok;
+import static org.springframework.http.ResponseEntity.*;
 
 @Slf4j
 @RestController
 @RequestMapping("/course")
+@CrossOrigin(originPatterns = "*")
 @RequiredArgsConstructor
 public class CourseController {
 
@@ -78,11 +80,14 @@ public class CourseController {
     private final NotificationService notificationService;
     private final EmailService emailService;
     private final CourseUserRepository courseUserRepository;
+    private final CourseStudentRepository courseStudentRepository;
+    private final WsNotificationController wsNotificationController;
+
 
     @Value("${spring.client-url}")
     private String URL_CLIENT;
 
-
+    @Secured(Constants.USER_ROLE)
     @GetMapping(value = "", produces = "application/json")
     public ResponseEntity<?> getCourseById(@RequestParam(value = "Title", required = false) String title, @RequestParam(value = "StartAt", required = false) Integer startAt, @RequestParam(value = "MaxResults", required = false) Integer maxResults, @RequestParam(value = "SortColumn", required = false) String sortColumn, HttpServletRequest request) {
 
@@ -90,14 +95,15 @@ public class CourseController {
         startAt = startAt == null ? 0 : startAt;
         maxResults = maxResults == null ? Integer.MAX_VALUE : maxResults;
         title = title == null ? "%%" : "%" + title + "%";
-        var index = (long) startAt + (long) maxResults;
         var count = courseService.countByOwner(username);
         var courses = courseService.getCoursesByTitleLike(title, PageableBuilder.getPageable(startAt, maxResults, sortColumn), username);
-        return ok().body(CommonResponse.builder().content(CourseWrapper.builder().hasMore(index < count).data(courses.stream().map(CourseResponse::new).toList()).total(count).build()).result(EResult.Successful).status(EStatus.Success).message("Lấy dữ liệu khoá học thành công").build());
+        var index = (long) startAt + courses.size();
+        return ok().body(CommonResponse.builder().content(CourseListWrapper.builder().hasMore(index < count).data(courses.stream().map(CourseResponse::new).toList()).total(count).build()).result(EResult.Successful).status(EStatus.Success).message("Lấy dữ liệu khoá học thành công").build());
     }
 
+    @Secured(Constants.USER_ROLE)
     @PostMapping(value = "", produces = "application/json")
-    public ResponseEntity<?> postCreateCourse(HttpServletRequest httpRequest, CreateCourseRequest request) {
+    public ResponseEntity<?> postCreateCourse(HttpServletRequest httpRequest, @RequestBody CreateCourseRequest request) {
         var currentUser = jwtUtils.getUserNameFromRequest(httpRequest);
         if (currentUser == null) {
             return getNotFoundCurrentUser();
@@ -111,16 +117,30 @@ public class CourseController {
         return ResponseEntity.badRequest().body(CommonResponse.builder().result(EResult.Error).status(EStatus.Error).content("").message("Không tìm thấy user").build());
     }
 
-    @GetMapping("/{id}")
+    @Secured(Constants.USER_ROLE)
+    @GetMapping(value = "/{id}", produces = "application/json")
     public ResponseEntity<?> getCourseById(HttpServletRequest httpRequest, @PathVariable("id") Integer id) {
         var currentUser = jwtUtils.getUserNameFromRequest(httpRequest);
+        var user = AuthenticationUtils.appUserDetails().unwrap();
         if (currentUser == null) return getNotFoundCurrentUser();
         Course foundCourse = courseService.findCourseById(currentUser, id);
-        if (foundCourse == null)
-            return new ResponseEntity<>(CommonResponse.builder().status(EStatus.Error).result(EResult.Error).message("Class not found").content("").build(), HttpStatus.NOT_FOUND);
-        return ok(CommonResponse.builder().status(EStatus.Success).result(EResult.Successful).message("Get course success").content(new CourseResponse(foundCourse)).build());
+        if (foundCourse == null) {
+            return new ResponseEntity<>(
+                    CommonResponse.builder().status(EStatus.Error).result(EResult.Error).message("Class not found").content("").build(),
+                    HttpStatus.NOT_FOUND);
+        }
+
+        CourseUser courseUser = courseUserRepository.findCourseUserByUserIdAndCourseId(user.getId(), foundCourse.getId());
+        var response = CourseWrapperResponse.builder()
+                .course(new CourseResponse(foundCourse))
+                .role(courseUser.getRole().getId())
+                .build();
+        return ok(CommonResponse.builder().status(EStatus.Success).result(EResult.Successful).message("Get course success")
+                .content(response)
+                .build());
     }
 
+    @Secured(Constants.USER_ROLE)
     @GetMapping(value = "/{id}/assignments", produces = "application/json")
     public ResponseEntity<?> getAssignmentsOfCourse(HttpServletRequest httpRequest, @PathVariable("id") Integer courseId, @RequestParam(value = "Name", required = false) String name, @RequestParam(value = "StartAt", required = false) Integer startAt, @RequestParam(value = "MaxResults", required = false) Integer maxResults, @RequestParam(value = "SortColumn", required = false) String sortColumn) {
         var currentUser = jwtUtils.getUserNameFromRequest(httpRequest);
@@ -138,16 +158,16 @@ public class CourseController {
         maxResults = maxResults == null ? Integer.MAX_VALUE : maxResults;
         if (currentUser == null) return getNotFoundCurrentUser();
         List<Assignment> assignments = courseService.findAssignmentOfsCourseLikeName(currentUser, courseId, name, PageableBuilder.getPageable(startAt, maxResults, sortColumn));
-        var total = courseService.findCourseById("tanhank2k", courseId).getAssignments().size();
-        var index = startAt + maxResults;
+        var total = courseService.findCourseById(currentUser, courseId).getAssignments().size();
+        var index = startAt + assignments.size();
         return ok(CommonResponse.builder().message("Get assigment successfully").status(EStatus.Success).result(EResult.Successful).content(AssignmentWrapper.builder().total(total).hasMore(index < total).data(assignments.stream().map(AssignmentResponse::new).toList()).build()).build());
     }
 
-    // TODO TESTING
+    @Secured(Constants.USER_ROLE)
     @PostMapping(value = "/{id}/assignments")
     public ResponseEntity<?> createNewAssignment(
             @PathVariable("id") Integer courseId,
-            HttpServletRequest httpServletRequest, CreateNewAssignmentsRequest request) {
+            HttpServletRequest httpServletRequest, @RequestBody CreateNewAssignmentsRequest request) {
         var currentUser = jwtUtils.getUserNameFromRequest(httpServletRequest);
 
         if (!validateUserInClass(currentUser, courseId, ERole.Teacher, false)) {
@@ -169,6 +189,7 @@ public class CourseController {
                 .build());
     }
 
+    @Secured(Constants.USER_ROLE)
     @PutMapping("/{id}/assignments/{assignmentId}")
     public ResponseEntity<?> updateAssignment(HttpServletRequest httpRequest, @PathVariable("id") Integer courseId, @PathVariable("assignmentId") Integer assignmentId, @RequestBody UpdateAssignmentsRequest request) {
         var currentUser = jwtUtils.getUserNameFromRequest(httpRequest);
@@ -219,8 +240,9 @@ public class CourseController {
         return validateUserInClass(username, courseId, role, false);
     }
 
+    @Secured(Constants.USER_ROLE)
     @DeleteMapping("/{id}/assignments/{assignmentId}")
-    public ResponseEntity<?> deleteAssignment(@PathVariable("id") Integer courseId, @PathVariable("assignmentId") Integer assignmentId, HttpServletRequest httpRequest, @RequestParam("currentUser") String currentUser) {
+    public ResponseEntity<?> deleteAssignment(@PathVariable("id") Integer courseId, @PathVariable("assignmentId") Integer assignmentId, HttpServletRequest httpRequest, @RequestParam("CurrentUser") String currentUser) {
         var username = jwtUtils.getUserNameFromRequest(httpRequest);
         if (!validateUserInClass(username, courseId, ERole.Teacher, false)) {
             return ResponseEntity.ok()
@@ -237,6 +259,7 @@ public class CourseController {
 
     }
 
+    @Secured(Constants.USER_ROLE)
     @PostMapping("/{id}/assignments-sort")
     public ResponseEntity<?> postSortAssignment(HttpServletRequest httpRequest, @PathVariable("id") Integer id, @RequestBody SortAssignmentRequest request) {
         var currentUser = jwtUtils.getUserNameFromRequest(httpRequest);
@@ -264,6 +287,7 @@ public class CourseController {
         return ok(CommonResponse.builder().status(EStatus.Success).result(EResult.Successful).content((Serializable) List.of(new AssignmentResponse(firstAssignment), new AssignmentResponse(secondAssignment))).message("Sort assignment successfully").build());
     }
 
+    @Secured(Constants.USER_ROLE)
     @GetMapping("/{id}/all-grades")
     public ResponseEntity<?> getAllGrades(@PathVariable("id") Integer courseId, @RequestParam("currentUser") String currentUser) {
         if (!validateUserInClass(currentUser, courseId, ERole.Teacher, false)) {
@@ -293,6 +317,7 @@ public class CourseController {
 
     private final StudentRepository studentRepository;
 
+    @Secured(Constants.USER_ROLE)
     @GetMapping("/{id}/all-grades/student")
     public ResponseEntity<?> getGradeByStudent(@PathVariable("id") Integer courseId, HttpServletRequest httpRequest) throws NotFoundException {
         var currentUser = jwtUtils.getUserNameFromRequest(httpRequest);
@@ -314,6 +339,7 @@ public class CourseController {
         return ResponseEntity.ok().body(CommonResponse.builder().result(EResult.Successful).status(EStatus.Success).message("Get grade for student successfully").content(SingleStudentGradeResponse.builder().total(1).header(course.getAssignments().stream().map(AssignmentResponse::new).toList()).scores(result).build()).build());
     }
 
+    @Secured(Constants.USER_ROLE)
     @GetMapping("/{id}/assignments/{assignmentId}/all-grades")
     public ResponseEntity<?> getAllGradesV2(@PathVariable("id") Integer id, @PathVariable("assignmentId") Integer assignmentId, @RequestParam(value = "currentUser", required = false) String currentUser, HttpServletRequest httpRequest) {
         currentUser = jwtUtils.getUserNameFromRequest(httpRequest);
@@ -349,6 +375,7 @@ public class CourseController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_OCTET_STREAM).contentLength(resource.contentLength()).body(resource);
     }
 
+    @Secured(Constants.USER_ROLE)
     @PostMapping(value = "/{id}/assignments/{assignmentsId}/update-grade", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> postUpdateGradeFromFile(@PathVariable("id") Integer courseId, @PathVariable("assignmentsId") Integer assignmentsId, @ModelAttribute FormDataUpload formDataUpload, HttpServletRequest request) throws IOException, NotFoundException {
         final String currentUser = jwtUtils.getUserNameFromRequest(request);
@@ -367,7 +394,7 @@ public class CourseController {
                 }
                 var studentIdCell = row.getCell(0);
                 var gradeCell = row.getCell(1);
-                var studentId = studentIdCell.getStringCellValue();
+                var studentId = tryParseString(studentIdCell);
                 var student = studentRepository.findByStudentId(studentId);
                 var g = Grade.builder().assigment(assignment).description("").gradeAssignment((float) gradeCell.getNumericCellValue()).mssv(studentId).isFinalized((byte) 0).student(student).build();
                 courseService.saveGrade(g, currentUser, assignmentsId, courseId);
@@ -376,7 +403,16 @@ public class CourseController {
         }
     }
 
+    public String tryParseString(Cell cell) {
+        try {
+            return cell.getStringCellValue();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return Objects.toString((int) cell.getNumericCellValue());
+        }
+    }
 
+    @Secured(Constants.USER_ROLE)
     @PostMapping(value = "/{id}/update-student", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> postUpdateStudentList(@PathVariable("id") Integer courseId,
                                                    @ModelAttribute FormDataUpload formDataUpload,
@@ -395,8 +431,7 @@ public class CourseController {
         return ResponseEntity.ok().body(CommonResponse.builder().status(EStatus.Success).result(EResult.Successful).content("").message("Update members in class success").build());
     }
 
-    @SneakyThrows
-    private List<Student> convertFileToListStudents(XSSFWorkbook book) {
+    private List<Student> convertFileToListStudents(XSSFWorkbook book) throws IOException {
         try {
             var sheet = book.getSheetAt(0);
             var list = new ArrayList<Student>();
@@ -406,7 +441,7 @@ public class CourseController {
                     next = false;
                     continue;
                 }
-                list.add(Student.builder().dateOfBirth(Instant.now()).studentId(row.getCell(0).getStringCellValue()).fullName(row.getCell(1).getStringCellValue()).build());
+                list.add(Student.builder().dateOfBirth(Instant.now()).studentId(tryParseString(row.getCell(0))).fullName(row.getCell(1).getStringCellValue()).build());
             }
             return list;
         } finally {
@@ -415,6 +450,7 @@ public class CourseController {
 
     }
 
+    @Secured(Constants.USER_ROLE)
     @PostMapping("/{id}/assignments/{assignmentsId}/update-grade-normal")
     public ResponseEntity<?> postUpdateAssignmentNormal(@PathVariable("id") Integer courseId, @PathVariable("assignmentsId") Integer assignmentsId, @RequestBody UpdateGradeNormalRequest request, HttpServletRequest httpServletRequest) {
         var currentUser = jwtUtils.getUserNameFromRequest(httpServletRequest);
@@ -434,15 +470,13 @@ public class CourseController {
             var students = studentIds.stream().map(studentRepository::findByStudentId).toList();
             var assignment = courseService.findAssigmentById(courseId, assignmentsId);
             var notifications = notificationService.createStudentNotifications(CreateStudentNotificationsArgs.builder().courseId(courseId).students(students).assignmentId(assignmentsId).message(String.format("%s đã trả điểm cho bài tập %s", user.getNormalizedUserName(), assignment.getName())).currentUser(request.getCurrentUser()).build());
-
-            log.info("Notifcation {}", notifications);
-            // TODO SOCKET
-
+            wsNotificationController.sendNotification(notifications);
         }
         return ok(CommonResponse.builder().status(EStatus.Success).result(EResult.Successful).content(success).message("Update grade normal success").build());
     }
 
 
+    @Secured(Constants.USER_ROLE)
     @PostMapping("/{id}/assignments/{assignmentsId}/update-grade-finalized")
     public ResponseEntity<?> postUpdateGradeFinalized(@PathVariable("id") Integer courseId, @PathVariable("assignmentsId") Integer assignmentsId, @RequestBody UpdateGradeSpecificRequest request, HttpServletRequest httpServletRequest) throws NotFoundException {
         request.setCurrentUser(jwtUtils.getUserNameFromRequest(httpServletRequest));
@@ -457,16 +491,16 @@ public class CourseController {
         var result = courseService.updateGradeSpecific(UpdateGradeSpecificArgs.builder().courseId(courseId).assignmentId(assignmentsId).isFinalized(request.getIsFinalized()).gradeAssignment(request.getGrade()).mssv(request.getMssv()).currentUser(request.getCurrentUser()).build());
         var studentUser = userService.findByStudentCode(request.getMssv());
         if (result && studentUser != null) {
-            // TODO socket
             var student = studentRepository.findByStudentId(request.getMssv());
             var user = AuthenticationUtils.appUserDetails().unwrap();
             var assignment = assignmentRepository.findById(assignmentsId).orElseThrow(() -> new NotFoundException("Not found assignment by id " + assignmentsId));
             var notification = notificationService.createStudentNotification(CreateStudentNotificationSingleArgs.builder().courseId(courseId).studentId(student.getStudentId()).gradeId(courseService.findGradeByCourseIdAndAssignmentId(request.getMssv(), courseId, assignmentsId)).message(String.format("%s đã trả điểm cho bài tập %s", user.getNormalizedUserName(), assignment.getName())).currentUser(request.getCurrentUser()).build());
-            log.info("Send notification {}", notification);
+            wsNotificationController.sendNotification(notification);
         }
         return ok(CommonResponse.builder().message("Get update grade for individual successfully").status(EStatus.Success).result(EResult.Successful).content(result).build());
     }
 
+    @Secured(Constants.USER_ROLE)
     @PostMapping(value = "/send-mail", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> postSendMail(@RequestBody SendMailJoinToCourseRequest request) {
         var tokenClassCode = StringHelper.generateHashString(request.getClassCode());
@@ -476,19 +510,21 @@ public class CourseController {
         return ok(CommonResponse.builder().status(EStatus.Success).result(EResult.Successful).content("").message(String.format("Send mail to %s successfully", request.getMailPersonReceive())).build());
     }
 
+    @Secured(Constants.USER_ROLE)
     @GetMapping("/{id}/everyone")
     public ResponseEntity<?> getMembersInCourse(@PathVariable("id") Integer courseId, HttpServletRequest request) {
         var currentUser = jwtUtils.getUserNameFromRequest(request);
         var listTeachers = courseService.getTeachers(courseId);
         var listStudent = courseService.getStudents(courseId);
         var course = courseService.findCourseById(currentUser, courseId);
+        if (course == null) return notFound().build();
         return ok(CommonResponse.builder()
                 .status(EStatus.Success)
                 .result(EResult.Successful)
                 .message("Get members in course successfully")
                 .content(MemberCourseResponse.builder()
                         .total(listStudent.size() + listTeachers.size())
-                        .owner(course != null ? course.getCreateBy() : "")
+                        .owner(course.getCreateBy())
                         .teachers(listTeachers)
                         .students(listStudent)
                         .build())
@@ -533,19 +569,32 @@ public class CourseController {
     }
 
     // TODO testing
+    @Secured(Constants.USER_ROLE)
     @PostMapping("/add-member/invite-link")
     public ResponseEntity<?> addStudentIntoCourseByLink(@RequestBody AddMemberIntoCourseByLinkRequest request, HttpServletRequest httpServletRequest) {
         var currentUser = jwtUtils.getUserNameFromRequest(httpServletRequest);
         request.setCurrentUser(currentUser);
+        var user = AuthenticationUtils.appUserDetails().unwrap();
+        if (user == null) {
+            return ResponseEntity.notFound().build();
+        }
+
         Course course = courseService.findAllCourses().stream().filter(c -> StringUtils.hasText(c.getCourseCode()) && StringHelper.check(request.getToken(), c.getCourseCode())).findFirst().orElse(null);
         if (course == null) {
             return ok(CommonResponse.builder().status(EStatus.Error).result(EResult.Error).content("").message(NOT_FOUND_COURSE_MSG).build());
         }
 
-        var user = AuthenticationUtils.appUserDetails().unwrap();
-        if (user == null) {
-            return ResponseEntity.notFound().build();
+        var courseUser = courseUserRepository.findCourseUserByUserIdAndCourseId(user.getId(), course.getId());
+
+        if (courseUser != null) {
+            return ok(CommonResponse.builder()
+                    .content("")
+                    .result(EResult.Error)
+                    .status(EStatus.Error)
+                    .message("Already join class")
+                    .build());
         }
+
         if (!StringUtils.hasText(request.getInvitee())) {
             if (courseService.addMemberIntoCourse(user, request.getRole(), course.getId())) {
                 return ok(CommonResponse.builder().status(EStatus.Success)
@@ -584,6 +633,7 @@ public class CourseController {
         }
     }
 
+    @Secured(Constants.USER_ROLE)
     @PostMapping("/update-role-member")
     public ResponseEntity<?> updateRoleMember(@RequestBody UpdateRoleMemberInCourseRequest request, HttpServletRequest httpServletRequest) {
         var currentUser = jwtUtils.getUserNameFromRequest(httpServletRequest);
@@ -633,6 +683,7 @@ public class CourseController {
                 .build());
     }
 
+    @Secured(Constants.USER_ROLE)
     @PostMapping("/remove-member")
     public ResponseEntity<?> removeMember(@RequestBody RemoveMemberInCourseRequest request, HttpServletRequest httpServletRequest) {
         var currentUser = jwtUtils.getUserNameFromRequest(httpServletRequest);
@@ -669,12 +720,33 @@ public class CourseController {
 
         var courseUser = courseUserRepository.findCourseUserByUserIdAndCourseId(request.getUserId(), request.getCourseId());
         if (courseUser == null) {
-            return ok(CommonResponse.builder()
-                    .status(EStatus.Error)
-                    .result(EResult.Error)
-                    .content("")
-                    .message("Not found user in class")
-                    .build());
+            var courseStudent = courseStudentRepository.findByStudentCode(request.getStudentId());
+            if (courseStudent == null) {
+                return ok(CommonResponse.builder()
+                        .status(EStatus.Error)
+                        .result(EResult.Error)
+                        .content("")
+                        .message("Not found user in class")
+                        .build());
+            } else {
+                try {
+                    studentRepository.delete(courseStudent.getStudent());
+                    return ok(CommonResponse.builder()
+                            .status(EStatus.Error)
+                            .result(EResult.Error)
+                            .content("")
+                            .message("Xoá tài khoản thành công")
+                            .build());
+                } catch (Exception e) {
+                    log.error("Cannot delete {}", e.getMessage());
+                    return ok(CommonResponse.builder()
+                            .status(EStatus.Error)
+                            .result(EResult.Error)
+                            .content("")
+                            .message("Xoá tài khoản thành công")
+                            .build());
+                }
+            }
         }
         try {
             courseUserRepository.delete(courseUser);
@@ -694,4 +766,5 @@ public class CourseController {
                     .build());
         }
     }
+
 }

@@ -18,8 +18,8 @@ import com.ledungcobra.dto.course.getAssignmentsOfCourse.AssignmentResponse;
 import com.ledungcobra.dto.course.getAssignmentsOfCourse.AssignmentWrapper;
 import com.ledungcobra.dto.course.getGradeByStudent.SingleStudentGradeResponse;
 import com.ledungcobra.dto.course.getMembersInCourse.MemberCourseResponse;
-import com.ledungcobra.dto.course.index.CourseResponse;
-import com.ledungcobra.dto.course.index.CourseWrapper;
+import com.ledungcobra.dto.course.getCourseById.CourseResponse;
+import com.ledungcobra.dto.course.index.CourseListWrapper;
 import com.ledungcobra.dto.course.postCreateCourse.CreateCourseRequest;
 import com.ledungcobra.dto.course.postSortAssignment.AssignmentSimple;
 import com.ledungcobra.dto.course.postSortAssignment.SortAssignmentRequest;
@@ -100,7 +100,7 @@ public class CourseControllerTest extends BaseTest {
                 .andReturn()
                 .getResponse()
                 .getContentAsString(StandardCharsets.UTF_8);
-        var response = objectMapper.readValue(responseString, new TypeReference<CommonResponse<CourseWrapper>>() {
+        var response = objectMapper.readValue(responseString, new TypeReference<CommonResponse<CourseListWrapper>>() {
         });
         var courseWapper = response.getContent();
         assertThat(response).isNotNull();

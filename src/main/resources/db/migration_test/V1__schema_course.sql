@@ -163,21 +163,21 @@ CREATE TABLE `Notification`
 
 
 
-CREATE TABLE ReviewComment
-(
-    `Id`            int AUTO_INCREMENT NOT NULL,
-    `Message`       Longtext           NULL,
-    `StudentId`     int                NOT NULL,
-    `TeacherId`     int                NOT NULL,
-    `GradeReviewId` int                NOT NULL,
-    `CreateBy`      Longtext           NULL,
-    `CreateOn`      Datetime           NOT NULL,
-    `UpdateBy`      Longtext           NULL,
-    `UpdateOn`      Datetime           NOT NULL,
-    CONSTRAINT `PK_ReviewComment` PRIMARY KEY
-        (
-         `Id` ASC
-            )
+
+CREATE TABLE ReviewComment(
+                              `Id` int AUTO_INCREMENT NOT NULL,
+                              `Message` Longtext NULL,
+                              `StudentId` int default 0,
+                              `TeacherId` int default 0,
+                              `GradeReviewId` int NOT NULL,
+                              `CreateBy` Longtext NULL,
+                              `CreateOn` Datetime NOT NULL,
+                              `UpdateBy` Longtext NULL,
+                              `UpdateOn` Datetime NOT NULL,
+                              CONSTRAINT `PK_ReviewComment` PRIMARY KEY
+                                  (
+                                   `Id` ASC
+                                      )
 );
 
 

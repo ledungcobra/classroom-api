@@ -1,5 +1,7 @@
 package com.ledungcobra.common;
 
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+
 import java.nio.charset.StandardCharsets;
 import java.util.Objects;
 
@@ -15,4 +17,8 @@ public class StringHelper {
         return Objects.equals(generateHashString(code), token);
     }
 
+    public static String getConfirmationLink(String token, String email, String serverPort) {
+        final String SERVER_URL = ServletUriComponentsBuilder.fromCurrentContextPath().build().toUriString();
+        return String.format("%s/Email/ConfirmEmail?token=%s&email=%s", SERVER_URL, token, email);
+    }
 }

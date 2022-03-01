@@ -14,5 +14,6 @@ import java.io.Serializable;
 public class RemoveMemberInCourseRequest implements Serializable {
     private Integer courseId;
     private Integer userId;
+    private String studentId;
     private String currentUser;
 }

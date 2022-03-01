@@ -1,4 +1,4 @@
-package com.ledungcobra.dto.course.index;
+package com.ledungcobra.dto.admin.createAccount;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -10,10 +10,10 @@ import java.util.List;
 
 @Data
 @NoArgsConstructor
-@Builder
 @AllArgsConstructor
-public class CourseWrapper implements Serializable {
-    private List<CourseResponse> data;
-    private boolean hasMore;
+@Builder
+public class DataWrapper implements Serializable {
+    private Boolean hasMore;
     private long total;
+    private List<? extends Serializable> data;
 }

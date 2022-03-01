@@ -3,11 +3,10 @@ package com.ledungcobra.controller;
 import com.ledungcobra.user.entity.User;
 import com.ledungcobra.user.service.UserService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.view.RedirectView;
 
 import java.util.UUID;
 
@@ -15,22 +14,33 @@ import static org.springframework.http.ResponseEntity.ok;
 
 @RestController
 @RequestMapping("/Email/")
+@CrossOrigin(originPatterns = "*")
 @RequiredArgsConstructor
 public class EmailController {
 
     private final UserService userService;
+    @Value("${spring.client-url}")
+    private String clientURL;
 
     // TODO testing
     @GetMapping("ConfirmEmail")
-    public ResponseEntity<?> confirmEmail(@RequestParam("token") String token,
-                                          @RequestParam("email") String email) {
+    public RedirectView confirmEmail(@RequestParam("token") String token,
+                                     @RequestParam("email") String email) {
 
         User user = userService.findByEmail(email);
+        var redirectView = new RedirectView();
+        redirectView.setPropagateQueryParams(true);
         if (user == null) {
-            return ok("Not found user");
+            redirectView.setUrl(clientURL + "/login?error=true");
+            return redirectView;
         }
         var success = userService.confirmEmail(user, token);
-        return ok(success ? "ConfirmEmail" : "Error");
+        if (success) {
+            redirectView.setUrl(clientURL + "/login?email-confirm=true");
+        } else {
+            redirectView.setUrl(clientURL + "/login?error=true");
+        }
+        return redirectView;
     }
 
     // TODO Testing

@@ -4,13 +4,15 @@ import com.ledungcobra.common.*;
 import com.ledungcobra.configuration.security.jwt.JwtUtils;
 import com.ledungcobra.configuration.security.userdetails.AppUserDetails;
 import com.ledungcobra.dto.user.changePassword.ChangePasswordRequest;
-import com.ledungcobra.dto.user.getProfile.GetProfileRequest;
+import com.ledungcobra.dto.user.changePassword.Result;
 import com.ledungcobra.dto.user.getUserByStudentCode.UserSimpleResponse;
 import com.ledungcobra.dto.user.login.LoginRequest;
 import com.ledungcobra.dto.user.login.LoginResponse;
 import com.ledungcobra.dto.user.register.RegisterUserDto;
 import com.ledungcobra.dto.user.register.UserResponse;
+import com.ledungcobra.dto.user.resetPassword.ResetPasswordRequest;
 import com.ledungcobra.dto.user.update.UpdateProfileRequest;
+import com.ledungcobra.exception.NotFoundException;
 import com.ledungcobra.mail.EmailService;
 import com.ledungcobra.user.entity.User;
 import com.ledungcobra.user.service.UserService;
@@ -27,15 +29,16 @@ import org.springframework.util.StringUtils;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.ObjectError;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.validation.Valid;
 import java.net.URI;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 import static com.ledungcobra.common.Constants.ADMIN_ROLE;
 import static com.ledungcobra.common.Constants.USER_ROLE;
+import static org.springframework.http.ResponseEntity.*;
 
 @RestController
 @RequestMapping("/users")
@@ -54,6 +57,8 @@ public class UserController {
     private final JwtUtils jwtUtils;
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
+    @Value("${spring.client-url}")
+    private String clientUrl;
 
     public UserController(UserService userService, AuthenticationManager authenticationManager, JwtUtils jwtUtils, PasswordEncoder passwordEncoder, EmailService emailService) {
         this.userService = userService;
@@ -68,20 +73,18 @@ public class UserController {
 
         var exist = userService.checkExists(registerDto.getUsername());
         if (exist) {
-            return ResponseEntity.badRequest().body(SingleResponse.builder()
+            return badRequest().body(SingleResponse.builder()
                     .result(ACCOUNT_ALREADY_TAKEN_MSG)
                     .build());
         } else {
             var user = userService.register(registerDto);
-            final String SERVER_URL = ServletUriComponentsBuilder.fromCurrentContextPath().build().toUriString() +
-                                            (!"80".equals(serverPort) && !"443".equals(serverPort) ? serverPort : "");
             var token = jwtUtils.generateToken(new AppUserDetails(user));
-            var confirmationLink = SERVER_URL + "/Email/ConfirmEmail?token=" + token + "&email=" + user.getEmail();
+            var confirmationLink = StringHelper.getConfirmationLink(token, user.getEmail(), serverPort);
             emailService.sendMail(registerDto.getEmail(), "Xác nhận tài khoản", "Xác nhận", confirmationLink, "Nhấn vào link để kích hoạt tài khoản");
             var resp = SingleResponse.builder()
                     .result(new UserResponse(user))
                     .build();
-            return ResponseEntity.created(URI.create("/users/registers/"))
+            return created(URI.create("/users/registers/"))
                     .body(resp);
         }
     }
@@ -90,7 +93,7 @@ public class UserController {
     public ResponseEntity<?> login(@RequestBody @Valid LoginRequest loginRequest, BindingResult bindingResult) throws Exception {
 
         if (bindingResult.hasErrors()) {
-            return ResponseEntity.badRequest().body(
+            return badRequest().body(
                     CommonResponse.builder()
                             .status(EStatus.Error)
                             .result(EResult.Error)
@@ -106,10 +109,10 @@ public class UserController {
 
             var appUserDetails = switch (authenticate.getPrincipal()) {
                 case AppUserDetails userDetails -> userDetails;
-                default -> throw new Exception("Not implemented");
+                default -> throw new NotFoundException("Login failt");
             };
 
-            return ResponseEntity.ok(CommonResponse.builder()
+            return ok(CommonResponse.builder()
                     .result(EResult.Successful)
                     .status(EStatus.Success)
                     .content(LoginResponse.builder()
@@ -117,6 +120,7 @@ public class UserController {
                             .id(user.getId())
                             .fullName(user.getNormalizedDisplayName())
                             .token(jwtUtils.generateToken(appUserDetails))
+                            .username(user.getUserName())
                             .refreshToken("")
                             .build())
                     .message(LOGIN_SUCCESS_MSG)
@@ -135,18 +139,18 @@ public class UserController {
 
         var token = httpRequest.getHeader("Authorization");
         if (token == null || !token.contains(" ") || !token.contains("Bearer")) {
-            return ResponseEntity.badRequest().body(CommonResponse.builder()
+            return badRequest().body(CommonResponse.builder()
                     .message("Bearer token is required")
                     .build());
         }
         token = token.split(" ")[1];
         var username = jwtUtils.getUserNameFromJwtToken(token);
         if (username == null) {
-            return ResponseEntity.badRequest().build();
+            return badRequest().build();
         }
 
-        if (!username.equals(request.getCurrentUser())) {
-            return ResponseEntity.badRequest()
+        if (!Objects.equals(username, request.getCurrentUser())) {
+            return badRequest()
                     .body(CommonResponse.builder()
                             .message("Bạn không thể đổi thông tin của người dùng khác")
                             .status(EStatus.Error)
@@ -165,7 +169,7 @@ public class UserController {
                     .build(), HttpStatus.NOT_FOUND);
         }
         User updated = userService.updateProfile(user, request);
-        return ResponseEntity.ok(CommonResponse.builder()
+        return ok(CommonResponse.builder()
                 .status(EStatus.Success)
                 .result(EResult.Successful)
                 .content(new UserResponse(updated))
@@ -183,7 +187,7 @@ public class UserController {
         var hashedOldPassword = userDetails.getPassword();
 
         if (!passwordEncoder.matches(plainOldPassword, hashedOldPassword)) {
-            return ResponseEntity.badRequest().body(CommonResponse.builder()
+            return badRequest().body(CommonResponse.builder()
                     .message("Mật khẩu không khớp")
                     .content("")
                     .result(EResult.Error)
@@ -193,7 +197,7 @@ public class UserController {
 
         if (!StringUtils.hasText(request.getNewPassword()) ||
                 request.getNewPassword().length() < 8) {
-            return ResponseEntity.badRequest().body(CommonResponse.builder()
+            return badRequest().body(CommonResponse.builder()
                     .status(EStatus.Error)
                     .result(EResult.Error)
                     .content("")
@@ -205,20 +209,19 @@ public class UserController {
         User user = userDetails.unwrap();
         user.setPasswordHash(hashedNewPassword);
         userService.update(user);
-        return ResponseEntity.ok(CommonResponse.builder()
+        return ok(CommonResponse.builder()
                 .status(EStatus.Success)
                 .result(EResult.Successful)
                 .message("Cập nhật mật khẩu thành công")
-                .content("")
+                .content(new Result(true))
                 .build());
     }
 
     @Secured({USER_ROLE, ADMIN_ROLE})
     @GetMapping("/profile")
-    public ResponseEntity<?> getProfile(@RequestBody GetProfileRequest request) {
+    public ResponseEntity<?> getProfile(@RequestParam("username") String username) {
 
-        User user = userService.findByUsername(request.getUsername());
-
+        User user = userService.findByUsername(username);
         if (user == null) {
             return new ResponseEntity<>(CommonResponse.builder()
                     .message("Không tìm được user")
@@ -228,7 +231,7 @@ public class UserController {
                     .build(), HttpStatus.NOT_FOUND);
         }
 
-        return ResponseEntity.ok(CommonResponse.builder()
+        return ok(CommonResponse.builder()
                 .status(EStatus.Success)
                 .result(EResult.Successful)
                 .content(new UserResponse(user))
@@ -249,12 +252,33 @@ public class UserController {
                     .build(), HttpStatus.NOT_FOUND);
         }
 
-        return ResponseEntity.ok(CommonResponse.builder()
+
+        return ok(CommonResponse.builder()
                 .status(EStatus.Success)
                 .result(EResult.Successful)
                 .content(new UserSimpleResponse(foundStudent))
                 .build());
     }
 
-
+    @PostMapping("reset-password")
+    public ResponseEntity<?> resetPassword(@RequestBody ResetPasswordRequest request) {
+        var user = userService.findByEmail(request.getEmail());
+        if (user == null) {
+            return ok(CommonResponse.builder()
+                    .status(EStatus.Error)
+                    .result(EResult.Error)
+                    .content("")
+                    .message("Not found user for reset password")
+                    .build());
+        }
+        var token = jwtUtils.generateToken(new AppUserDetails(user));
+        var link = String.format("%s/login?reset-password=true&token=%s&email=%s", clientUrl, token, request.getEmail());
+        emailService.sendMail(request.getEmail(), "Khôi phục mật khẩu", "Khôi phục", link, "Nhấn vào đường dẫn bên dưới để khôi phục mật khẩu");
+        return ok(CommonResponse.builder()
+                .status(EStatus.Success)
+                .result(EResult.Successful)
+                .content("")
+                .message("Mail to reset password success")
+                .build());
+    }
 }

@@ -1,14 +1,18 @@
-package com.ledungcobra.dto.course.index;
+package com.ledungcobra.dto.course.getCourseById;
 
 import com.ledungcobra.course.entity.Course;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.io.Serializable;
 
+
+
 @Data
 @NoArgsConstructor
+@Builder
 @AllArgsConstructor
 public class CourseResponse implements Serializable {
 
@@ -21,6 +25,7 @@ public class CourseResponse implements Serializable {
     private String schedule;
     private String owner;
     private String createUsername;
+    private Integer role;
 
     public CourseResponse(Course course) {
         id = course.getId();

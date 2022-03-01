@@ -101,7 +101,7 @@ public class JwtUtils {
 
     /**
      * Call this method when request come to controller
-     * Authorization header from request is validated by @see {@link com.ledungcobra.configuration.security.jwt.JwtAuthenticationFilter#doFilterInternal(HttpServletRequest, HttpServletResponse, FilterChain)}
+     * Authorization header from request is validated by @see {@link JwtAuthenticationFilter#doFilterInternal(HttpServletRequest, HttpServletResponse, FilterChain)}
      *
      * @param request
      * @return

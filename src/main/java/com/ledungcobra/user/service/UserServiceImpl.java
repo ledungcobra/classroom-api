@@ -10,12 +10,14 @@ import com.ledungcobra.user.oauth2.CustomOAuth2User;
 import com.ledungcobra.user.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import javax.persistence.EntityManager;
+import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -42,7 +44,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public User register(RegisterUserDto data) {
+    public User register(RegisterUserDto data, ERoleAccount roleAccount) {
 
         var user = User.builder()
                 .userName(data.getUsername())
@@ -59,7 +61,7 @@ public class UserServiceImpl implements UserService {
                 .phoneNumber(data.getPhoneNumber())
                 .personalPhoneNumber(data.getPhoneNumber())
                 .passwordHash(passwordEncoder.encode(data.getPassword()))
-                .role(entityManager.getReference(AppRole.class, ERoleAccount.User.getValue()))
+                .role(entityManager.getReference(AppRole.class, roleAccount.getValue()))
                 .securityStamp("")
                 .concurrencyStamp("")
                 .twoFactorEnabled((byte) 0)
@@ -75,6 +77,11 @@ public class UserServiceImpl implements UserService {
                 .build();
 
         return userRepository.save(createAudit(user, data.getUsername()));
+    }
+
+    @Override
+    public User register(RegisterUserDto data) {
+        return register(data, ERoleAccount.User);
     }
 
     @Override
@@ -133,7 +140,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public void update(User user) {
-        userRepository.save(user);
+        userRepository.save(AuditUtils.updateAudit(user, user.getUserName() == null ? "" : user.getUserName()));
     }
 
     @Override
@@ -176,6 +183,21 @@ public class UserServiceImpl implements UserService {
             return true;
         }
         return false;
+    }
+
+    @Override
+    public List<User> findByRoleAndUsername(int roleId, String username, Pageable page) {
+        return userRepository.findByRoleIdAndUsername(roleId, username);
+    }
+
+    @Override
+    public User findAdminById(Integer id) {
+        return userRepository.findByIdRoleId(id, ERoleAccount.Admin.getValue());
+    }
+
+    @Override
+    public long countByRole(int roleId) {
+        return userRepository.countByRoleId(roleId);
     }
 
 }

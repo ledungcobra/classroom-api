@@ -44,7 +44,7 @@ public class NotificationServiceImpl implements NotificationService {
                         .gradeReviewId(args.getGradeReviewId())
                         .userId(u.getId())
                         .isSeen((byte) 0)
-                        .typeNotification(ETypeNotification.ForStudent)
+                        .typeNotification(ETypeNotification.ForStudent.getValue())
                         .build())
                 .map(n -> notificationRepository.save(AuditUtils.createAudit(n, args.getCurrentUser())))
                 .toList();
@@ -59,7 +59,7 @@ public class NotificationServiceImpl implements NotificationService {
                 .gradeId(args.getGradeId())
                 .gradeReviewId(args.getGradeReviewId())
                 .userId(u.getId())
-                .typeNotification(ETypeNotification.ForStudent)
+                .typeNotification(ETypeNotification.ForStudent.getValue())
                 .build();
         notification.setIsSeen(false);
         return notificationRepository.save(AuditUtils.createAudit(notification, args.getCurrentUser()));
@@ -114,7 +114,7 @@ public class NotificationServiceImpl implements NotificationService {
                     .gradeReviewId(gradeReview.getId())
                     .senderName(student.getFullName())
                     .isSeen((byte) 0)
-                    .typeNotification(ETypeNotification.ForTeacher)
+                    .typeNotification(ETypeNotification.ForTeacher.getValue())
                     .build();
             return AuditUtils.createAudit(notification, currentUser);
         }).toList();

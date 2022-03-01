@@ -26,6 +26,8 @@ public interface CourseService {
 
     Course findCourseById(String currentUser, Integer id);
 
+    Course findCourseById(Integer id);
+
     List<Assignment> findAssignmentOfsCourseLikeName(String currentUser, Integer courseId, String name, Pageable pageable);
 
     Assignment findAssigmentById(Integer courseId, Integer assignmentId);
@@ -70,4 +72,12 @@ public interface CourseService {
     Assignment createAssignment(CreateNewAssignmentArgs args);
 
     List<Integer> getTeacherIds(Integer courseId);
+
+    List<Course> findCourseByTitle(String title, Pageable page);
+
+    long countCourse();
+
+    List<Assignment> getAssignments(Integer courseId, String s, Pageable page);
+
+    long countAssignmentByCourseId(Integer courseId);
 }

@@ -2,9 +2,12 @@ package com.ledungcobra.controller;
 
 import com.ledungcobra.common.*;
 import com.ledungcobra.configuration.security.jwt.JwtUtils;
+import com.ledungcobra.configuration.websocket.MessageBody;
+import com.ledungcobra.configuration.websocket.WsMessageController;
 import com.ledungcobra.course.entity.Grade;
 import com.ledungcobra.course.entity.GradeReview;
 import com.ledungcobra.course.entity.ReviewComment;
+import com.ledungcobra.course.entity.Student;
 import com.ledungcobra.course.repository.CourseUserRepository;
 import com.ledungcobra.course.repository.GradeRepository;
 import com.ledungcobra.course.repository.StudentRepository;
@@ -40,6 +43,7 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
 import java.io.Serializable;
+import java.util.HashMap;
 import java.util.Objects;
 
 import static org.springframework.http.ResponseEntity.badRequest;
@@ -48,6 +52,7 @@ import static org.springframework.http.ResponseEntity.ok;
 @RestController
 @RequestMapping("/grade-review")
 @RequiredArgsConstructor
+@CrossOrigin(originPatterns = "*")
 @Slf4j
 public class GradeReviewController {
 
@@ -59,11 +64,13 @@ public class GradeReviewController {
     private final GradeRepository gradeRepository;
     private final JwtUtils jwtUtils;
     private final NotificationService notificationService;
+    private final WsMessageController wsMessageController;
+
 
     // TODO Testing
     @GetMapping("")
     @SneakyThrows
-    public ResponseEntity<?> getGradeReview(@RequestParam("CourseId") Integer courseId, @RequestParam("GradeId") Integer gradeId, @RequestParam("GradeReviewId") Integer gradeReviewId, @RequestParam("CurrentUser") String currentUser) {
+    public ResponseEntity<?> getGradeReview(@RequestParam("CourseId") Integer courseId, @RequestParam("GradeId") Integer gradeId, @RequestParam("gradeReviewId") Integer gradeReviewId, @RequestParam("CurrentUser") String currentUser) {
 
         if (!validateGradeReviewOfUser(currentUser, courseId, ERole.None, false, gradeId, gradeReviewId)) {
             return ok(CommonResponse.builder().status(EStatus.Success).result(EResult.Successful).content("").message("Permission denied for getting grade review ").build());
@@ -97,7 +104,7 @@ public class GradeReviewController {
                 if (courseUser == null) return false;
 
                 var gradeReview = gradeReviewService.findById(gradeReviewId);
-                if (gradeReview == null || (courseUser.getRole().getId() == ERole.Student.getValue() && !Objects.equals(student.getId(), gradeReview.getStudent() != null ? gradeReview.getStudent().getStudentId() : null))) {
+                if (gradeReview == null || (courseUser.getRole().getId() == ERole.Student.getValue() && !Objects.equals(student.getId(), gradeReview.getStudent() != null ? gradeReview.getStudent().getId() : null))) {
                     return false;
                 }
             }
@@ -138,15 +145,17 @@ public class GradeReviewController {
             return badRequest;
         }
         var gradeReview = gradeReviewService.createGradeReview(request.getGradeId(), request.getGradeExpect(), student.getId(), request.getReason(), currentUser);
+        var grade = gradeReview.getGrade();
+        var assignment = grade.getAssigment();
+        var assignmentName = assignment != null ? assignment.getName() : "";
         var notificationMsg = String.format("%s create new grade review for %s",
-                (gradeReview.getStudent() != null ? gradeReview.getStudent().getFullName() : ""),
-                gradeReview.getGrade() == null ? "" : (gradeReview.getGrade().getAssigment() == null ? "" : gradeReview.getGrade().getAssigment().getName())
+                (gradeReview.getStudent() != null ? gradeReview.getStudent().getFullName() : ""), assignmentName
         );
         var notifications = notificationService
                 .createRequestGradeReviewNotification(currentUser, gradeReview, notificationMsg, student);
 
-        //TODO SOCKET
-        log.info("Socket {}", notifications);
+        //TODO SOCKET not implemented yet
+        log.info("Socket1 {}", notifications);
         var response = new GradeReviewResponse(gradeReview);
         response.setGrade(new GradeResponse(gradeReview.getGrade()));
         response.setExerciseName(gradeReview.getGrade().getAssigment() != null ? gradeReview.getGrade().getAssigment().getName() : "");
@@ -182,16 +191,15 @@ public class GradeReviewController {
                         .build())
                 .build());
         GradeReview gradeReview = gradeReviewService.findById(request.getGradeReviewId());
-        var studentId = userService.findByStudentCode(gradeReview.getStudent().getStudentId());
+        var student = userService.findByStudentCode(gradeReview.getStudent().getStudentId());
         var teachers = courseService.getTeachers(gradeReview.getGrade().getAssigment().getCourse().getId());
+        var message = new MessageBody(res.getBody());
         for (UserResponse teacher : teachers) {
             if (!Objects.equals(user.getId(), teacher.getId())) {
-                // TODO SOCKET to teacher
+                wsMessageController.sendApproval(teacher.getId(), message);
             }
         }
-
-        // TODO Socket to approval
-        log.info("Socket to {}", studentId);
+        wsMessageController.sendApproval(student.getId(), message);
         return res;
     }
 
@@ -205,7 +213,12 @@ public class GradeReviewController {
 
         var comments = gradeReviewService.findAllCommentsByGradeReview(gradeReviewId);
         var response = comments.stream().map(ReviewCommentResponse::new).toList();
-        return ok(CommonResponse.builder().status(EStatus.Success).result(EResult.Successful).content((Serializable) response).message("Get comment for grade review successfully").build());
+        var wrapper = new HashMap<String, Object>();
+        wrapper.put("data", response);
+        wrapper.put("hasMore", false);
+        return ok(CommonResponse.builder().status(EStatus.Success)
+                .result(EResult.Successful)
+                .content(wrapper).message("Get comment for grade review successfully").build());
     }
 
 
@@ -246,9 +259,8 @@ public class GradeReviewController {
 
     // TODO Testing
     @DeleteMapping("/delete")
-    public ResponseEntity<?> deleteGradeReview(HttpServletRequest httpRequest,
-                                               @RequestBody DeleteGradeReviewRequest request) {
-        var user = AuthenticationUtils.appUserDetails().unwrap();
+    public ResponseEntity<CommonResponse<Serializable>> deleteGradeReview(HttpServletRequest httpRequest,
+                                                                          @RequestBody DeleteGradeReviewRequest request) {
         var currentUser = jwtUtils.getUserNameFromRequest(httpRequest);
         var badRequest = ok(CommonResponse.builder()
                 .status(EStatus.Error)
@@ -264,20 +276,17 @@ public class GradeReviewController {
             return badRequest;
         }
         gradeReviewService.delete(gradeReview);
-        // TODO Socket
-        var res = ok(CommonResponse.builder()
+        return ok(CommonResponse.builder()
                 .status(EStatus.Success)
                 .result(EResult.Successful)
                 .content(request.getGradeReviewId())
                 .message("Delete grade review successfully")
                 .build());
-        log.info("Socket {}", res);
-        return res;
     }
 
     // TODO TESTING
     @PostMapping("/teacher-comment")
-    public ResponseEntity<?> postTeacherComment(@RequestBody CreateTeacherCommentRequest request, HttpServletRequest httpServletRequest) {
+    public ResponseEntity<CommonResponse<?>> postTeacherComment(@RequestBody CreateTeacherCommentRequest request, HttpServletRequest httpServletRequest) {
         var currentUser = jwtUtils.getUserNameFromRequest(httpServletRequest);
         var user = AuthenticationUtils.appUserDetails().unwrap();
         if (!validateGradeReviewOfUser(currentUser, request.getCourseId(), ERole.Teacher, false, request.getGradeId(), request.getGradeReviewId())) {
@@ -303,22 +312,24 @@ public class GradeReviewController {
         var response = new ReviewCommentResponse(reviewComment);
         response.setTeacher(new UserResponse(user));
         User studentUser = userService.findByStudentCode(student.getStudentId());
-        // TODO SOCKET
-        log.info("Socket {}", studentUser.getId());
-        var teachers = courseService.getTeacherIds(request.getCourseId());
-        for (Integer teacherId : teachers) {
-            if (teacherId != user.getId()) {
-                // TODO SOCKET
-                log.info("SOCKET {}", teacherId);
-            }
-        }
-
-        return ok(CommonResponse.builder()
+        var res = CommonResponse.builder()
                 .status(EStatus.Success)
                 .result(EResult.Successful)
                 .content(response)
                 .message("Create new comment review successfully")
-                .build());
+                .build();
+
+        var messageBody = new MessageBody(response);
+        wsMessageController.addComment(studentUser.getId(), messageBody);
+        log.info("Socket5 {}", studentUser.getId());
+        var teachers = courseService.getTeacherIds(request.getCourseId());
+        for (Integer teacherId : teachers) {
+            if (!Objects.equals(teacherId, user.getId())) {
+                wsMessageController.addComment(teacherId, messageBody);
+            }
+        }
+
+        return ok(res);
     }
 
     // TODO TESTING
@@ -356,13 +367,12 @@ public class GradeReviewController {
                 .message("Update comment success")
                 .build());
         var studentId = userService.findByStudentCode(reviewComment.getGradeReview().getStudent().getStudentId()).getId();
-        // TODO Socket
-        log.info("Message service {}", studentId);
+        var body = new MessageBody(res.getBody());
+        wsMessageController.updateComment(studentId, body);
         var teachers = courseService.getTeacherIds(request.getCourseId());
         for (Integer teacherId : teachers) {
             if (!Objects.equals(teacherId, user.getId())) {
-                // TODO Socket
-                log.info("Message service {} update comment ", teacherId);
+                wsMessageController.updateComment(teacherId, body);
             }
         }
 
@@ -385,7 +395,7 @@ public class GradeReviewController {
         }
 
         var reviewComment = gradeReviewService.findReviewCommentById(request.getReviewCommentId());
-        if (reviewComment == null || Objects.equals(reviewComment.getCreateBy(), currentUser)) {
+        if (reviewComment == null || !Objects.equals(reviewComment.getCreateBy(), currentUser)) {
             return ok(CommonResponse.builder()
                     .status(EStatus.Error)
                     .result(EResult.Error)
@@ -401,14 +411,14 @@ public class GradeReviewController {
                 .content(request.getReviewCommentId())
                 .message("Delete comment review successfully")
                 .build());
-        var studentId = userService.findByStudentCode(reviewComment.getStudent().getStudentId()).getId();
-        // TODO SOCKET
-        log.info("Socket {}", studentId);
+        Student student = reviewComment.getGradeReview().getStudent();
+        var studentId = userService.findByStudentCode(student.getStudentId()).getId();
+        var message = new MessageBody(res.getBody());
+        wsMessageController.deleteComment(studentId, message);
         var teachers = courseService.getTeacherIds(request.getCourseId());
         for (Integer teacherId : teachers) {
             if (!Objects.equals(teacherId, user.getId())) {
-                // TODO socket
-                log.info("Socket {}", teacherId);
+                wsMessageController.deleteComment(teacherId, message);
             }
         }
         return res;
@@ -436,20 +446,21 @@ public class GradeReviewController {
         notificationService.createRequestGradeReviewNotification(currentUser, gradeReview, msg, student);
         var response = new ReviewCommentResponse(reviewComment);
         var teachers = courseService.getTeacherIds(request.getCourseId());
-        for (Integer teacherId : teachers) {
-            if (Objects.equals(teacherId, user.getId())) {
-                // TODO SOCKET
-                log.info("Send notification to socket {}", teacherId);
-            }
-        }
-
-        return ok(CommonResponse.builder()
+        var res = CommonResponse.builder()
                 .status(EStatus.Success)
                 .result(EResult.Successful)
                 .content(response)
                 .message("Create new comment successfully")
-                .build());
+                .build();
+
+        var message = new MessageBody(response);
+        for (Integer teacherId : teachers) {
+            wsMessageController.addComment(teacherId, message);
+        }
+
+        return ok(res);
     }
+
     // TODO Testing
     @PutMapping("/student-comment/update")
     public ResponseEntity<?> putStudentUpdateComment(@RequestBody StudentUpdateCommentRequest request,
@@ -483,10 +494,10 @@ public class GradeReviewController {
                 .message("Update comment review successfully")
                 .build());
         var teachers = courseService.getTeacherIds(request.getCourseId());
+        var message = new MessageBody(res.getBody());
         for (Integer teacherId : teachers) {
-            if (Objects.equals(teacherId, user.getId())) {
-                // TODO Socket
-                log.info("Socket {}", teacherId);
+            if (!Objects.equals(teacherId, user.getId())) {
+                wsMessageController.updateComment(teacherId, message);
             }
         }
         return res;
@@ -507,7 +518,7 @@ public class GradeReviewController {
                     .build());
         }
         var reviewComment = gradeReviewService.findReviewCommentById(request.getReviewCommentId());
-        if (reviewComment == null) {
+        if (reviewComment == null || !Objects.equals(reviewComment.getCreateBy(), currentUser)) {
             return ok(CommonResponse.builder()
                     .status(EStatus.Error)
                     .result(EResult.Error)
@@ -523,10 +534,10 @@ public class GradeReviewController {
                 .message("Delete review comment successfully")
                 .build());
         var teachers = courseService.getTeacherIds(request.getCourseId());
+        var socketResponse = new MessageBody(res.getBody());
         for (Integer teacherId : teachers) {
-            if (Objects.equals(teacherId, user.getId())) {
-                // Delete socket
-                log.info("Delete comment {}", teacherId);
+            if (!Objects.equals(teacherId, user.getId())) {
+                wsMessageController.deleteComment(teacherId, socketResponse);
             }
         }
         return res;

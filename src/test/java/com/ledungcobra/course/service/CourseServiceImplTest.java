@@ -2,18 +2,9 @@ package com.ledungcobra.course.service;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.ledungcobra.common.EGender;
-import com.ledungcobra.common.EUserStatus;
-import com.ledungcobra.common.OffsetPageable;
-import com.ledungcobra.common.PageableBuilder;
-import com.ledungcobra.course.entity.Assignment;
-import com.ledungcobra.course.entity.Course;
-import com.ledungcobra.course.entity.Grade;
-import com.ledungcobra.course.entity.Student;
-import com.ledungcobra.course.repository.AssignmentRepository;
-import com.ledungcobra.course.repository.CourseStudentRepository;
-import com.ledungcobra.course.repository.GradeRepository;
-import com.ledungcobra.course.repository.StudentRepository;
+import com.ledungcobra.common.*;
+import com.ledungcobra.course.entity.*;
+import com.ledungcobra.course.repository.*;
 import com.ledungcobra.dto.common.UpdateGradeSpecificArgs;
 import com.ledungcobra.dto.course.createNewAssignment.CreateNewAssignmentArgs;
 import com.ledungcobra.dto.course.postCreateCourse.CreateCourseRequest;
@@ -21,6 +12,7 @@ import com.ledungcobra.dto.course.postUpdateAssignmentNormal.UpdateGradeNormalRe
 import com.ledungcobra.dto.course.postUpdateAssignmentNormal.UpdateGradeSpecificRequestBase;
 import com.ledungcobra.dto.user.register.UserResponse;
 import com.ledungcobra.exception.NotFoundException;
+import com.ledungcobra.user.repository.UserRepository;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.flywaydb.test.annotation.FlywayTest;
@@ -69,6 +61,12 @@ class CourseServiceImplTest {
     @Autowired
     private GradeRepository gradeRepository;
 
+    @Autowired
+    private CourseUserRepository courseUserRepository;
+
+    @Autowired
+    private UserRepository userRepository;
+
     private ObjectMapper objectMapper = new ObjectMapper();
 
     public static CreateCourseRequest createCourse_success = CreateCourseRequest.builder()
@@ -94,7 +92,10 @@ class CourseServiceImplTest {
     @Test
     void createCourse() {
         Course savedCourse = courseService.createCourse(createCourse_success);
+        assertThat(savedCourse.getTitle()).isNotNull().isNotBlank();
         assertThat(savedCourse).isNotNull();
+        CourseUser courseUser = courseUserRepository.findCourseUserByUserIdAndCourseId(userRepository.findByUserName("tanhank2k").get().getId(), savedCourse.getId());
+        assertThat(courseUser.getCreateBy()).isEqualTo("tanhank2k");
     }
 
     @Test
@@ -376,7 +377,7 @@ class CourseServiceImplTest {
         assertThat(first.getId()).isEqualTo(15);
         assertThat(first.getUsername()).isEqualTo("tanhank2k");
         assertThat(first.getFirstName()).isEqualTo("Bùi");
-        assertThat(first.getGender().getValue()).isEqualTo(EGender.None.getValue());
+        assertThat(first.getGender()).isEqualTo(EGender.None.getValue());
         assertThat(first.getEmail()).isEqualTo("tanhanh2kocean@gmail.com");
         assertThat(first.getProfileImageUrl()).isNull();
         assertThat(first.getPersonalEmail()).isEqualTo("string");

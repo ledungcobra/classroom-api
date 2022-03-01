@@ -4,12 +4,11 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ledungcobra.common.BaseTest;
 import com.ledungcobra.common.CommonResponse;
-import com.ledungcobra.common.EStatus;
 import com.ledungcobra.common.EResult;
+import com.ledungcobra.common.EStatus;
 import com.ledungcobra.configuration.security.jwt.JwtUtils;
 import com.ledungcobra.course.entity.Notification;
 import com.ledungcobra.course.repository.NotificationRepository;
-import com.ledungcobra.dto.notification.NotificationResponse;
 import com.ledungcobra.dto.notification.NotificationsResponse;
 import com.ledungcobra.user.service.UserService;
 import lombok.SneakyThrows;
@@ -65,7 +64,7 @@ class NotificationControllerTest extends BaseTest {
         var data = content.getData();
         assertThat(data.getAmountUnseen()).isEqualTo(5L);
         assertThat(data.getNotifications().size()).isEqualTo(11);
-        for (NotificationResponse notification : data.getNotifications()) {
+        for (var notification : data.getNotifications()) {
             assertThat(notification).isNotNull();
         }
     }

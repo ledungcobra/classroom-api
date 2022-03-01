@@ -1,8 +1,5 @@
 package com.ledungcobra.dto.user.register;
 
-import com.ledungcobra.common.EGender;
-import com.ledungcobra.common.ERoleAccount;
-import com.ledungcobra.common.EUserStatus;
 import com.ledungcobra.course.entity.Student;
 import com.ledungcobra.user.entity.User;
 import lombok.Data;
@@ -20,15 +17,15 @@ public class UserResponse implements Serializable {
     private String middleName;
     private String lastName;
     @EqualsAndHashCode.Exclude
-    private ERoleAccount role;
-    private EGender gender;
+    private Integer role;
+    private Integer gender;
     private String email;
     private String profileImageUrl;
     private String personalEmail;
     private String studentID;
     private String phoneNumber;
     private String personalPhoneNumber;
-    private EUserStatus userStatus;
+    private Integer userStatus;
     @EqualsAndHashCode.Exclude
     private String createOn;
     private String fullname;
@@ -38,18 +35,18 @@ public class UserResponse implements Serializable {
         username = data.getUserName();
         profileImageUrl = data.getProfileImageUrl();
         email = data.getEmail();
-        gender = EGender.from(data.getGender());
+        gender = data.getGender();
         studentID = data.getStudentID();
-        role = ERoleAccount.from(data.getRole() != null ? data.getRole().getId() : 0);
+        role = data.getRole().getId();
         phoneNumber = data.getPhoneNumber();
         firstName = data.getFirstName();
         middleName = data.getMiddleName();
         lastName = data.getLastName();
         personalEmail = data.getPersonalEmail();
         personalPhoneNumber = data.getPersonalPhoneNumber();
-        userStatus = EUserStatus.from(data.getUserStatus());
-        createOn = data.getCreateOn().toString();
+        userStatus = data.getUserStatus();
         fullname = data.getNormalizedDisplayName();
+        createOn = data.getCreateOn() != null ? data.getCreateOn().toString():"";
     }
 
     public UserResponse(Student student) {

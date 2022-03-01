@@ -49,10 +49,23 @@ public class CourseServiceImpl implements CourseService {
 
     @Override
     public Course createCourse(CreateCourseRequest request) {
-        var course = Course.builder().schedule(request.getSchedule()).description(request.getDescription()).gradeId(request.getGradeId()).courseCode(UUID.randomUUID().toString()).title(request.getTitle()).credits(request.getCredits())
-
+        var course = Course.builder()
+                .schedule(request.getSchedule()).
+                description(request.getDescription())
+                .gradeId(request.getGradeId())
+                .courseCode(UUID.randomUUID().toString())
+                .title(request.getTitle())
+                .credits(request.getCredits())
                 .build();
-        return courseRepository.save(AuditUtils.createAudit(course, request.getCurrentUser()));
+
+        var savedCourse = courseRepository.save(AuditUtils.createAudit(course, request.getCurrentUser()));
+        var courseUser = CourseUser.builder()
+                .role(entityManager.getReference(ClassRole.class, ERole.Teacher.getValue()))
+                .course(savedCourse)
+                .user(userRepository.findByUserName(request.getCurrentUser()).orElse(null))
+                .build();
+        courseUserRepository.save(AuditUtils.createAudit(courseUser, request.getCurrentUser()));
+        return savedCourse;
     }
 
     @Override
@@ -63,6 +76,11 @@ public class CourseServiceImpl implements CourseService {
     @Override
     public Course findCourseById(String currentUser, Integer id) {
         return courseRepository.findCourseByIdAndUserName(currentUser, id);
+    }
+
+    @Override
+    public Course findCourseById(Integer id) {
+        return courseRepository.findById(id).orElse(null);
     }
 
     @Override
@@ -127,6 +145,22 @@ public class CourseServiceImpl implements CourseService {
         }
     }
 
+
+
+    private Student insertIfNotExist(String mssv, Integer courseId, String auditor) {
+        Student student = studentRepository.findByStudentId(mssv);
+        if (student == null) {
+            student = createNewStudent(mssv, auditor);
+        }
+
+        var cs = courseStudentRepository.findAllByCourseId(courseId);
+        if (cs.stream().noneMatch(c -> Objects.equals(mssv,c.getStudentCode()))) {
+            var courseStudent = CourseStudent.builder().studentCode(mssv).course(entityManager.getReference(Course.class, courseId)).student(student).build();
+            courseStudentRepository.save(AuditUtils.createAudit(courseStudent, auditor));
+        }
+        return student;
+    }
+
     @Override
     public boolean updateGradeNormal(UpdateGradeNormalRequest request, Integer assignmentsId, Integer courseId) {
         var assignment = assignmentRepository.findById(assignmentsId).orElse(null);
@@ -183,18 +217,6 @@ public class CourseServiceImpl implements CourseService {
     }
 
 
-    private Student insertIfNotExist(String mssv, Integer courseId, String auditor) {
-        Student student = studentRepository.findByStudentId(mssv);
-        if (student == null) {
-            student = createNewStudent(mssv, auditor);
-            var cs = courseStudentRepository.findAllByCourseId(courseId);
-            if (cs.stream().noneMatch(c -> c.getStudentCode() != null && c.getStudentCode().equals(mssv))) {
-                var courseStudent = CourseStudent.builder().studentCode(mssv).course(entityManager.getReference(Course.class, courseId)).student(student).build();
-                courseStudentRepository.save(AuditUtils.createAudit(courseStudent, auditor));
-            }
-        }
-        return student;
-    }
 
     @Override
     public Grade saveGrade(Grade grade, String auditor, Integer assignmentsId, Integer courseId) {
@@ -277,6 +299,26 @@ public class CourseServiceImpl implements CourseService {
 
     @Override
     public List<Integer> getTeacherIds(Integer courseId) {
-        return courseUserRepository.findUserIdsByCourseIdAndRole(courseId,ERole.Teacher.getValue());
+        return courseUserRepository.findUserIdsByCourseIdAndRole(courseId, ERole.Teacher.getValue());
+    }
+
+    @Override
+    public List<Course> findCourseByTitle(String title, Pageable page) {
+        return courseRepository.findByTitle(title, page);
+    }
+
+    @Override
+    public long countCourse() {
+        return courseRepository.count();
+    }
+
+    @Override
+    public List<Assignment> getAssignments(Integer courseId, String name, Pageable page) {
+        return assignmentRepository.findByCourseIdAndNameLike(courseId, name, page);
+    }
+
+    @Override
+    public long countAssignmentByCourseId(Integer courseId) {
+        return assignmentRepository.countByCourseId(courseId);
     }
 }

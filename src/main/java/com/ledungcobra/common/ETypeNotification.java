@@ -7,21 +7,21 @@ public enum ETypeNotification {
     ForStudent(1),
     ForTeacher(2);
 
-    private final byte value;
+    private final int value;
 
     ETypeNotification(int value) {
-        this.value = (byte) value;
+        this.value = value;
     }
 
     @JsonValue
-    public byte getValue() {
+    public int getValue() {
         return value;
     }
 
     public static ETypeNotification from(int value){
-        return switch ((byte)value){
-            case (byte)1 -> ETypeNotification.ForStudent;
-            case (byte) 2-> ETypeNotification.ForTeacher;
+        return switch (value){
+            case 1 -> ETypeNotification.ForStudent;
+            case  2-> ETypeNotification.ForTeacher;
             default -> throw new IllegalStateException("Unexpected value: " + (byte) value);
         };
     }

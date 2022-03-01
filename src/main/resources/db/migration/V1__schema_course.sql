@@ -179,8 +179,8 @@ CREATE TABLE `Notification`(
 CREATE TABLE ReviewComment(
                               `Id` int AUTO_INCREMENT NOT NULL,
                               `Message` Longtext NULL,
-                              `StudentId` int NOT NULL,
-                              `TeacherId` int NOT NULL,
+                              `StudentId` int default 0,
+                              `TeacherId` int default 0,
                               `GradeReviewId` int NOT NULL,
                               `CreateBy` Longtext NULL,
                               `CreateOn` Datetime NOT NULL,
@@ -355,7 +355,7 @@ ALTER TABLE CourseStudent  ADD  CONSTRAINT `FK_CourseStudent_Course_CourseId` FO
 
 
 ALTER TABLE CourseStudent  ADD  CONSTRAINT `FK_CourseStudent_Student_StudentId` FOREIGN KEY(`StudentId`)
-    REFERENCES Student (`Id`);
+    REFERENCES Student (`Id`) on delete cascade ;
 
 
 
@@ -368,14 +368,14 @@ ALTER TABLE Grade  ADD  CONSTRAINT `FK_Grade_Assignments_AssignmentId` FOREIGN K
 
 
 ALTER TABLE Grade  ADD  CONSTRAINT `FK_Grade_Student_StudentId` FOREIGN KEY(`StudentId`)
-    REFERENCES Student (`Id`);
+    REFERENCES Student (`Id`) on delete cascade ;
 
 
 ALTER TABLE GradeReview  ADD  CONSTRAINT `FK_GradeReview_Grade_GradeId` FOREIGN KEY(`GradeId`)
-    REFERENCES Grade (`Id`);
+    REFERENCES Grade (`Id`) on delete cascade ;
 
 ALTER TABLE GradeReview  ADD  CONSTRAINT `FK_GradeReview_Student_StudentId` FOREIGN KEY(`StudentId`)
-    REFERENCES Student (`Id`);
+    REFERENCES Student (`Id`) on delete cascade ;
 
 ALTER TABLE ReviewComment  ADD  CONSTRAINT `FK_ReviewComment_GradeReview_GradeReviewId` FOREIGN KEY(`GradeReviewId`)
     REFERENCES GradeReview (`Id`);

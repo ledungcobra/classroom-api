@@ -1,5 +1,6 @@
 package com.ledungcobra.dto.notification;
 
+import com.ledungcobra.course.entity.Notification;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -14,5 +15,5 @@ import java.util.List;
 @Builder
 public class NotificationData implements Serializable {
     private long amountUnseen;
-    private List<NotificationResponse> notifications;
+    private List<Notification> notifications;
 }
