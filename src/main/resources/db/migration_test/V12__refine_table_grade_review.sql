@@ -1,6 +1,6 @@
 use coursetest;
-delete from reviewcomment where GradeReviewId in (2,4);
+delete from ReviewComment where GradeReviewId in (2,4);
 
 delete
-from gradereview
-where id in (2, 4);
+from ReviewComment
+where Id in (2, 4);

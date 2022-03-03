@@ -1,5 +1,6 @@
 package com.ledungcobra.course.service;
 
+import com.ledungcobra.common.PageableBuilder;
 import com.ledungcobra.course.entity.Notification;
 import com.ledungcobra.course.repository.NotificationRepository;
 import com.ledungcobra.course.repository.StudentRepository;
@@ -83,7 +84,30 @@ class NotificationServiceImplTest {
 
     @Test
     void countByUserId() {
-        long count = notificationRepository.countByUserId(1);
-        log.info("Count {}", count);
+        long count = notificationRepository.countByUserId(15);
+        assertThat(count).isEqualTo(11);
     }
+
+    @Test
+    void findAllByUserId() {
+        var notifications = notificationService.findAllByUserId(15);
+        assertThat(notifications).hasSize(11);
+    }
+
+    @Test
+    void findAllByUserIdV2() {
+        var resultCount = 9;
+        var page = PageableBuilder.getPageable(0, resultCount, "-CreateOn");
+        var notifications = notificationService.findAllByUserId(15, page);
+        assertThat(notifications).hasSize(resultCount);
+    }
+
+    @Test
+    void findAllByUserIdV3() {
+        var resultCount = 9;
+        var page = PageableBuilder.getPageable(0, resultCount, "-CreateOn");
+        var notifications = notificationService.findAllByUserId(15, page);
+        assertThat(notifications).hasSize(resultCount);
+    }
+
 }

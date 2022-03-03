@@ -28,7 +28,6 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
@@ -47,7 +46,6 @@ import static org.springframework.http.ResponseEntity.*;
 public class AdminController {
 
     private final UserService userService;
-    private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
     private final JwtUtils jwtUtils;
     private final EmailService emailService;
@@ -74,6 +72,7 @@ public class AdminController {
         return ok(CommonResponse.builder().result(EResult.Successful).status(EStatus.Success).content(LoginResponse.builder().email(user.getEmail()).id(user.getId()).role(user.getRole().getId()).fullName(user.getNormalizedDisplayName()).token(jwtUtils.generateToken(appUserDetails)).refreshToken("").build()).message(LOGIN_SUCCESS_MSG).build());
     }
 
+    // TODO Testing
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody RegisterNewUserRequest request) {
 

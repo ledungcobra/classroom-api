@@ -4,6 +4,7 @@ import com.ledungcobra.common.*;
 import com.ledungcobra.configuration.security.jwt.JwtUtils;
 import com.ledungcobra.configuration.websocket.MessageBody;
 import com.ledungcobra.configuration.websocket.WsMessageController;
+import com.ledungcobra.configuration.websocket.WsNotificationController;
 import com.ledungcobra.course.entity.Grade;
 import com.ledungcobra.course.entity.GradeReview;
 import com.ledungcobra.course.entity.ReviewComment;
@@ -65,9 +66,9 @@ public class GradeReviewController {
     private final JwtUtils jwtUtils;
     private final NotificationService notificationService;
     private final WsMessageController wsMessageController;
+    private final WsNotificationController wsNotificationController;
 
 
-    // TODO Testing
     @GetMapping("")
     @SneakyThrows
     public ResponseEntity<?> getGradeReview(@RequestParam("CourseId") Integer courseId, @RequestParam("GradeId") Integer gradeId, @RequestParam("gradeReviewId") Integer gradeReviewId, @RequestParam("CurrentUser") String currentUser) {
@@ -130,7 +131,6 @@ public class GradeReviewController {
     }
 
 
-    // TODO TESTING
     @PostMapping("")
     public ResponseEntity<?> postCreateGradeReview(@RequestBody CreateGradeReviewRequest request, HttpServletRequest httpServletRequest) throws NotFoundException {
         var currentUser = jwtUtils.getUserNameFromRequest(httpServletRequest);
@@ -153,9 +153,8 @@ public class GradeReviewController {
         );
         var notifications = notificationService
                 .createRequestGradeReviewNotification(currentUser, gradeReview, notificationMsg, student);
+        wsNotificationController.sendNotification(notifications);
 
-        //TODO SOCKET not implemented yet
-        log.info("Socket1 {}", notifications);
         var response = new GradeReviewResponse(gradeReview);
         response.setGrade(new GradeResponse(gradeReview.getGrade()));
         response.setExerciseName(gradeReview.getGrade().getAssigment() != null ? gradeReview.getGrade().getAssigment().getName() : "");
@@ -168,7 +167,6 @@ public class GradeReviewController {
                 .build());
     }
 
-    // TODO TESTING
     @PostMapping("/approval")
     public ResponseEntity<?> postApproveGradeReview(@RequestBody ApprovalGradeReviewRequest request,
                                                     HttpServletRequest httpServletRequest

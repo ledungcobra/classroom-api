@@ -1,11 +1,12 @@
 use coursetest;
-create table `Classrole`
+
+create table `ClassRole`
 (
-    `id`   int primary key,
-    `name` varchar(255)
+    Id   int primary key,
+    Name varchar(255)
 );
 
-insert into `Classrole`(`id`, `name`)
+insert into `ClassRole`(Id, Name)
 values (1, 'TEACHER')
         ,
        (2, 'STUDENT');
@@ -13,11 +14,11 @@ values (1, 'TEACHER')
 
 create table `Role`
 (
-    `id`   int primary key,
-    `name` varchar(255)
+    Id   int primary key,
+    Name varchar(255)
 );
 
-insert into `Role`(`id`, `name`)
+insert into `Role`(Id, Name)
 values (1, 'ADMIN')
         ,
        (0, 'USER');

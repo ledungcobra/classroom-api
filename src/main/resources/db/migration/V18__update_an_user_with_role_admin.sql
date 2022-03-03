@@ -1,4 +1,4 @@
 use course;
-update course.users
+update course.Users
 set role_id = 1
-where id = 14;
+where Id = 14;

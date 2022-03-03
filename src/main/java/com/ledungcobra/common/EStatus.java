@@ -4,8 +4,10 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 public enum EStatus {
+
     Success(200),
-    Error(400);
+    Error(400),
+    AuthenticationFail(401);
 
     private final int value;
 

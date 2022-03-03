@@ -29,7 +29,7 @@ public class WsNotificationController extends BaseWebSocketController {
     }
 
     @SneakyThrows
-    public <T extends Map<String, Object>> void sendNotification(List<Notification> notifications) {
+    public void sendNotification(List<Notification> notifications) {
         for (Notification notification : notifications) {
             sendMessageToClient(notification.getUserId(), objectMapper.writeValueAsString(MessageBody.builder()
                     .channel(NOTIFICATION)
@@ -39,7 +39,7 @@ public class WsNotificationController extends BaseWebSocketController {
     }
 
     @SneakyThrows
-    public <T extends Map<String, Object>> void sendNotification(Notification notification) {
+    public void sendNotification(Notification notification) {
         sendMessageToClient(notification.getUserId(), objectMapper.writeValueAsString(MessageBody.builder()
                 .channel(NOTIFICATION)
                 .data(MessageBody.fromObject(notification))

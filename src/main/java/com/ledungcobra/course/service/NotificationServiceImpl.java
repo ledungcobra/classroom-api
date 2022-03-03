@@ -65,7 +65,6 @@ public class NotificationServiceImpl implements NotificationService {
         return notificationRepository.save(AuditUtils.createAudit(notification, args.getCurrentUser()));
     }
 
-    // TODO Testing
     @Override
     public long countByUserId(Integer userId) {
         return notificationRepository.countByUserId(userId);

@@ -89,7 +89,10 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
                         log.info("Authorization for " + oauthUser.getEmail());
                         var token = jwtUtils.generateToken(new AppUserDetails(user));
-                        res.sendRedirect(String.format("%s/login?token=%s&email=%s&username=%s&fullname=%s", CLIENT_APP_URL, token, user.getEmail(), user.getUserName(), user.getNormalizedUserName()));
+                        res.sendRedirect(String.format("%s/login?token=%s&email=%s&username=%s&fullname=%s",
+                                CLIENT_APP_URL,
+                                token, user.getEmail(), user.getUserName(),
+                                user.getNormalizedUserName()));
                     } catch (Exception e) {
                         log.error("Authorization error {}", e.getMessage());
                     }

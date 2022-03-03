@@ -1,2 +1,2 @@
 use course;
-update role set role.Name = concat('ROLE_' ,role.Name) where 1 = 1;
+update Role set Role.Name = concat('ROLE_' ,Role.Name) where 1 = 1;

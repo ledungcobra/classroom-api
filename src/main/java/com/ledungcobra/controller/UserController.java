@@ -8,6 +8,8 @@ import com.ledungcobra.dto.user.changePassword.Result;
 import com.ledungcobra.dto.user.getUserByStudentCode.UserSimpleResponse;
 import com.ledungcobra.dto.user.login.LoginRequest;
 import com.ledungcobra.dto.user.login.LoginResponse;
+import com.ledungcobra.dto.user.postRefreshToken.RefreshToken;
+import com.ledungcobra.dto.user.postRefreshToken.RefreshTokenResponse;
 import com.ledungcobra.dto.user.register.RegisterUserDto;
 import com.ledungcobra.dto.user.register.UserResponse;
 import com.ledungcobra.dto.user.resetPassword.ResetPasswordRequest;
@@ -16,6 +18,7 @@ import com.ledungcobra.exception.NotFoundException;
 import com.ledungcobra.mail.EmailService;
 import com.ledungcobra.user.entity.User;
 import com.ledungcobra.user.service.UserService;
+import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -43,6 +46,7 @@ import static org.springframework.http.ResponseEntity.*;
 @RestController
 @RequestMapping("/users")
 @CrossOrigin(originPatterns = "*")
+@Log4j2
 public class UserController {
 
 
@@ -121,7 +125,7 @@ public class UserController {
                             .fullName(user.getNormalizedDisplayName())
                             .token(jwtUtils.generateToken(appUserDetails))
                             .username(user.getUserName())
-                            .refreshToken("")
+                            .refreshToken(jwtUtils.generateRefreshToken(appUserDetails))
                             .build())
                     .message(LOGIN_SUCCESS_MSG)
                     .build());
@@ -281,4 +285,36 @@ public class UserController {
                 .message("Mail to reset password success")
                 .build());
     }
+
+    @PostMapping("refreshToken")
+    public ResponseEntity<?> postRefreshToken(@RequestBody RefreshToken body) {
+        log.info("Body {}", body);
+        if (jwtUtils.validateToken(body.getRefreshToken())) {
+            var currentUser = jwtUtils.getUserNameFromJwtToken(body.getRefreshToken());
+            var foundUser = userService.findByUsername(currentUser);
+            var userDetails = new AppUserDetails(foundUser);
+            if (foundUser != null) {
+                var tokenResponse = RefreshTokenResponse.builder()
+                        .token(jwtUtils.generateToken(userDetails))
+                        .refreshToken(jwtUtils.generateRefreshToken(userDetails))
+                        .build();
+                return ResponseEntity.ok(CommonResponse.builder()
+                        .content(tokenResponse)
+                        .status(EStatus.Success)
+                        .result(EResult.Successful)
+                        .message("")
+                        .build());
+            } else {
+                return new ResponseEntity<>(CommonResponse.builder()
+                        .result(EResult.Error)
+                        .status(EStatus.Error)
+                        .message("Not found")
+                        .content("")
+                        .build(), HttpStatus.NOT_FOUND);
+            }
+        } else {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
 }

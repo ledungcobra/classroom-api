@@ -1,3 +1,3 @@
 use course;
 
-alter table users add column provider varchar(15);
+alter table Users add column provider varchar(15);

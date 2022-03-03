@@ -1,3 +1,3 @@
 use course;
 
-alter table course.assignments drop column GradeScale;
+alter table Assignments drop column GradeScale;

@@ -43,7 +43,6 @@ public class EmailController {
         return redirectView;
     }
 
-    // TODO Testing
     @GetMapping("reset-password")
     public ResponseEntity<?> resetPassword(@RequestParam("token") String token,
                                            @RequestParam("email") String email) {
@@ -58,6 +57,5 @@ public class EmailController {
         var result = userService.resetPassword(user, token, randomPass);
         return ok(result ? randomPass : "Error");
     }
-
 
 }

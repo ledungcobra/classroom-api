@@ -1,4 +1,3 @@
 use coursetest;
 
-alter table assignments
-    drop column GradeScale;
+alter table Assignments drop column GradeScale;

@@ -1,2 +1,2 @@
 use coursetest;
-alter table course drop column SubjectId;
+alter table Course drop column SubjectId;

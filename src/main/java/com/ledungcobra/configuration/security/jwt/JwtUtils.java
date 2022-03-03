@@ -25,7 +25,10 @@ public class JwtUtils {
 
 
     @Value("${spring.security.jwt.expired-in-seconds}")
-    private Integer jwtExpiredInSeconds;
+    private Integer jwtTokenExpiredInSeconds;
+
+    @Value("${spring.security.jwt.refresh-token-expired-in-seconds}")
+    private Integer jwtRefreshTokenExpiredInSeconds;
 
     private  UserService userService;
 
@@ -43,9 +46,23 @@ public class JwtUtils {
     public String generateToken(AppUserDetails userDetails) {
 
         Date now = new Date();
-        Date expiryDate = new Date(now.getTime() + jwtExpiredInSeconds * 1000);
+        Date expiryDate = new Date(now.getTime() + jwtTokenExpiredInSeconds * 1000);
         log.info("Expired time {}", expiryDate);
 
+        return Jwts.builder()
+                .setSubject(userDetails.getUsername())
+                .setIssuedAt(now)
+                .setExpiration(expiryDate)
+                .signWith(SignatureAlgorithm.HS512, JWT_SECRET)
+                .compact();
+    }
+
+
+
+
+    public String generateRefreshToken(AppUserDetails userDetails) {
+        Date now = new Date();
+        Date expiryDate = new Date(now.getTime() + jwtRefreshTokenExpiredInSeconds * 1000);
         return Jwts.builder()
                 .setSubject(userDetails.getUsername())
                 .setIssuedAt(now)

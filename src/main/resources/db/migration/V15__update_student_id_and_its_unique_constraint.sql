@@ -1,10 +1,10 @@
 use course;
-update users
+update Users
 set StudentID='3'
 where UserName = '677SG';
-update users
+update Users
 set StudentID= '18120345'
 where UserName = 'panhhuu';
 
-alter table users
-    add constraint unique UK_STUDENT_ID (StudentID);
+alter table Users
+    add constraint unique UK_STUDENT_ID (StudentID(100));

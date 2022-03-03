@@ -22,11 +22,19 @@ public class TestRunner implements CommandLineRunner {
     @Autowired
     private UserDetailsService userDetailsService;
 
+    @Value("${spring.security.jwt.expired-in-seconds}")
+    private Integer jwtTokenExpiredInSeconds;
+
+    @Value("${spring.security.jwt.refresh-token-expired-in-seconds}")
+    private Integer jwtRefreshTokenExpiredInSeconds;
+
     @Override
     public void run(String... args) throws Exception {
         log.error("Email is {}", email);
         AppUserDetails user = (AppUserDetails) userDetailsService.loadUserByUsername("tanhank2k");
         String token = jwtUtils.generateToken(user);
         log.info(String.format("Bearer %s", token));
+        log.info("Token expired in " + jwtTokenExpiredInSeconds + " seconds");
+        log.info("Refresh expired in " + jwtRefreshTokenExpiredInSeconds + " seconds");
     }
 }

@@ -74,11 +74,13 @@ INSERT Grade (`Id`, `Name`, `Description`, `CreateBy`, `CreateOn`, `UpdateBy`, `
 INSERT Grade (`Id`, `Name`, `Description`, `CreateBy`, `CreateOn`, `UpdateBy`, `UpdateOn`, `AssignmentId`, `GradeAssignment`, `IsFinalized`, `MSSV`, `StudentId`) VALUES (9, NULL, NULL, 'tanhank2k', CAST('2021-12-22T17:10:26.7944782' AS DATETIME(6)), 'tanhank2k', CAST('2021-12-22T17:38:58.1368158' AS DATETIME(6)), 2, 222, 0, '3', 3);
 INSERT Grade (`Id`, `Name`, `Description`, `CreateBy`, `CreateOn`, `UpdateBy`, `UpdateOn`, `AssignmentId`, `GradeAssignment`, `IsFinalized`, `MSSV`, `StudentId`) VALUES (10, NULL, NULL, 'tanhank2k', CAST('2021-12-22T18:16:04.7967723' AS DATETIME(6)), 'tanhank2k', CAST('2021-12-22T19:42:49.0803711' AS DATETIME(6)), 5, 110, 0, '1', 1);
 
-INSERT GradeReview(`Id`, `GradeExpect`, `Message`, `StudentId`, `GradeId`, `Status`, `CreateBy`, `CreateOn`, `UpdateBy`, `UpdateOn`) VALUES (2, 110, 'Test request grade review update v2', 1, 1, 2, '677SG', CAST('2022-01-16T16:22:06.9773288' AS DATETIME(6)), 'tanhank2k', CAST('2022-01-18T18:31:56.6673048' AS DATETIME(6)));
-INSERT GradeReview (`Id`, `GradeExpect`, `Message`, `StudentId`, `GradeId`, `Status`, `CreateBy`, `CreateOn`, `UpdateBy`, `UpdateOn`) VALUES (3, 100, 'Test request grade review', 1, 1, 1, '677SG', CAST('2022-01-16T16:24:17.5140334' AS DATETIME(6)), '677SG', CAST('2022-01-16T16:24:17.5140374' AS DATETIME(6)));
-INSERT GradeReview (`Id`, `GradeExpect`, `Message`, `StudentId`, `GradeId`, `Status`, `CreateBy`, `CreateOn`, `UpdateBy`, `UpdateOn`) VALUES (4, 100, 'Test request grade 2', 1, 3, 1, '677SG', CAST('2022-01-16T16:36:00.8372789' AS DATETIME(6)), '677SG', CAST('2022-01-16T16:36:00.8381320' AS DATETIME(6)));
-INSERT GradeReview (`Id`, `GradeExpect`, `Message`, `StudentId`, `GradeId`, `Status`, `CreateBy`, `CreateOn`, `UpdateBy`, `UpdateOn`) VALUES (5, 100, 'Điểm không xứng đáng', 1, 3, 1, '677SG', CAST('2022-01-16T16:46:29.8051289' AS DATETIME(6)), '677SG', CAST('2022-01-16T16:46:29.8055329' AS DATETIME(6)));
-INSERT GradeReview (`Id`, `GradeExpect`, `Message`, `StudentId`, `GradeId`, `Status`, `CreateBy`, `CreateOn`, `UpdateBy`, `UpdateOn`) VALUES (6, 100, 'Điểm cũ hơi thấp ạ', 2, 4, 1, 'test', CAST('2022-01-18T14:37:43.0946127' AS DATETIME(6)), 'test', CAST('2022-01-18T14:37:43.0946724' AS DATETIME(6)));
+
+INSERT GradeReview (`Id`, `GradeExpect`, `Message`, `StudentId`, `GradeId`, `Status`, `CreateBy`, `CreateOn`, `UpdateBy`, `UpdateOn`)
+VALUES (3, 100, 'Test request grade review', 1, 1, 1, '677SG', CAST('2022-01-16T16:24:17.5140334' AS DATETIME(6)), '677SG', CAST('2022-01-16T16:24:17.5140374' AS DATETIME(6)));
+INSERT GradeReview (`Id`, `GradeExpect`, `Message`, `StudentId`, `GradeId`, `Status`, `CreateBy`, `CreateOn`, `UpdateBy`, `UpdateOn`)
+ VALUES (5, 100, 'Điểm không xứng đáng', 1, 3, 1, '677SG', CAST('2022-01-16T16:46:29.8051289' AS DATETIME(6)), '677SG', CAST('2022-01-16T16:46:29.8055329' AS DATETIME(6)));
+INSERT GradeReview (`Id`, `GradeExpect`, `Message`, `StudentId`, `GradeId`, `Status`, `CreateBy`, `CreateOn`, `UpdateBy`, `UpdateOn`)
+VALUES (6, 100, 'Điểm cũ hơi thấp ạ', 2, 4, 1, 'test', CAST('2022-01-18T14:37:43.0946127' AS DATETIME(6)), 'test', CAST('2022-01-18T14:37:43.0946724' AS DATETIME(6)));
 
 
 INSERT Notification (`Id`, `UserId`, `IsSeen`, `SenderName`, `TypeNotification`, `Message`, `CreateBy`, `CreateOn`, `UpdateBy`, `UpdateOn`, `CourseId`, `GradeId`, `GradeReviewId`) VALUES (5, 15, 1, 'Bùi Tấn Hạnh', 2, 'Bùi Tấn Hạnh comment in request grade review for assignment Bài tập tuần 1 đã sửa', '677SG', CAST('2022-01-17T16:49:18.6234415' AS DATETIME(6)), '677SG', CAST('2022-01-17T16:49:18.6234425' AS DATETIME(6)), 1, 1, 2);

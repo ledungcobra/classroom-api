@@ -1,2 +1,2 @@
 use course;
-delete from  users where id = 14;
+delete from  Users where Id = 14;

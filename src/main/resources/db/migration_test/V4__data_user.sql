@@ -1,6 +1,6 @@
 use coursetest;
 
-INSERT into Users (`Id`, `FirstName`, `MiddleName`, `LastName`, `Gender`, `Address`, `NormalizedDisplayName`,
+INSERT Users (`Id`, `FirstName`, `MiddleName`, `LastName`, `Gender`, `Address`, `NormalizedDisplayName`,
               `PersonalEmail`, `PersonalEmailConfirmed`, `NormalizedPersonalEmail`, `PersonalPhoneNumber`, `CreateBy`,
               `CreateOn`, `UpdateBy`, `UpdateOn`, `UserStatus`, `UserName`, `NormalizedUserName`, `Email`,
               `NormalizedEmail`, `EmailConfirmed`, `PasswordHash`, `SecurityStamp`, `ConcurrencyStamp`, `PhoneNumber`,
@@ -12,7 +12,7 @@ VALUES (2, 'Bui', 'Ta', 'Hanh', 0, NULL, 'BUI TAN HANH', NULL, 0, NULL, NULL, 'a
         'AQAAAAEAACcQAAAAENc82JjJgW/de72JVujqXzeWsOmqBPuueT3fVwktBWPRV2cQE/DuIRmPfvol4VLNgw==',
         'UYF3HGBN5LULD7MENDLD34X5XGBL3DCP', '020f0f64-d318-486d-a378-a3f828117c37', '0812291357', 0, 0, NULL, 1, 0,
         '18120352', NULL, 0);
-INSERT into Users (`Id`, `FirstName`, `MiddleName`, `LastName`, `Gender`, `Address`, `NormalizedDisplayName`,
+INSERT Users (`Id`, `FirstName`, `MiddleName`, `LastName`, `Gender`, `Address`, `NormalizedDisplayName`,
               `PersonalEmail`, `PersonalEmailConfirmed`, `NormalizedPersonalEmail`, `PersonalPhoneNumber`, `CreateBy`,
               `CreateOn`, `UpdateBy`, `UpdateOn`, `UserStatus`, `UserName`, `NormalizedUserName`, `Email`,
               `NormalizedEmail`, `EmailConfirmed`, `PasswordHash`, `SecurityStamp`, `ConcurrencyStamp`, `PhoneNumber`,
@@ -24,7 +24,7 @@ VALUES (4, 'Dung', NULL, 'Le', 0, NULL, 'DUNG LE', NULL, 0, NULL, NULL, NULL,
         'AQAAAAEAACcQAAAAECBi79DEb/5EAL9EYxa47oMEPj+KwX6KYn1yDq8nzi7ytekLGgmMcxIaT4OM+gIkoQ==',
         'GLO2JKTXI43QHU7MACQ2VCMRCOSHH7YH', '2739914a-ab40-4962-ae92-5118ef65ce4b', '090999909', 0, 0, NULL, 1, 0, '2',
         NULL, 0);
-INSERT into Users (`Id`, `FirstName`, `MiddleName`, `LastName`, `Gender`, `Address`, `NormalizedDisplayName`,
+INSERT Users (`Id`, `FirstName`, `MiddleName`, `LastName`, `Gender`, `Address`, `NormalizedDisplayName`,
               `PersonalEmail`, `PersonalEmailConfirmed`, `NormalizedPersonalEmail`, `PersonalPhoneNumber`, `CreateBy`,
               `CreateOn`, `UpdateBy`, `UpdateOn`, `UserStatus`, `UserName`, `NormalizedUserName`, `Email`,
               `NormalizedEmail`, `EmailConfirmed`, `PasswordHash`, `SecurityStamp`, `ConcurrencyStamp`, `PhoneNumber`,
@@ -36,7 +36,7 @@ VALUES (5, 'Phạm', 'Anh', 'Hữu', 0, NULL, 'PHẠM ANH HỮU', 'panhhuu@gmail
         'PANHHUU@GMAIL.COM', 1, 'AQAAAAEAACcQAAAAEGG18TvSv1rjeuvh3gPBPC9urywgaUuJb26xzavKrbHD5T73yrekSQkHUR9RWvWW9A==',
         'PC7XHY4QDKMJWMCOLXK3CKC7BQUFEL3', '6747449c-802a-44e7-b4d9-90d55627c880', '0987654321', 0, 0, null, 1, 3,
         '18120394', NULL, 0);
-INSERT into Users (`Id`, `FirstName`, `MiddleName`, `LastName`, `Gender`, `Address`, `NormalizedDisplayName`,
+INSERT Users (`Id`, `FirstName`, `MiddleName`, `LastName`, `Gender`, `Address`, `NormalizedDisplayName`,
               `PersonalEmail`, `PersonalEmailConfirmed`, `NormalizedPersonalEmail`, `PersonalPhoneNumber`, `CreateBy`,
               `CreateOn`, `UpdateBy`, `UpdateOn`, `UserStatus`, `UserName`, `NormalizedUserName`, `Email`,
               `NormalizedEmail`, `EmailConfirmed`, `PasswordHash`, `SecurityStamp`, `ConcurrencyStamp`, `PhoneNumber`,
@@ -49,7 +49,7 @@ VALUES (6, 'Phạm', 'Anh', 'Hữu', 0, NULL, 'PHẠM ANH HỮU', 'panhhuu@gmail
         'AQAAAAEAACcQAAAAEPnCNFacGiFm01ITvB+pyldKy2XWf6Q9scwMmGbngaRD0SIHPICVYBnDbDVoqezs6w==',
         'QFQI4UJKWTTVRYHKYAIGMEG5CRTUUD4X', 'c79e1d96-08ae-4256-9ed7-618649272f35', '0987654321', 0, 0, NULL, 1, 0,
         '18120394', NULL, 0);
-INSERT into Users (`Id`, `FirstName`, `MiddleName`, `LastName`, `Gender`, `Address`, `NormalizedDisplayName`,
+INSERT Users (`Id`, `FirstName`, `MiddleName`, `LastName`, `Gender`, `Address`, `NormalizedDisplayName`,
               `PersonalEmail`, `PersonalEmailConfirmed`, `NormalizedPersonalEmail`, `PersonalPhoneNumber`, `CreateBy`,
               `CreateOn`, `UpdateBy`, `UpdateOn`, `UserStatus`, `UserName`, `NormalizedUserName`, `Email`,
               `NormalizedEmail`, `EmailConfirmed`, `PasswordHash`, `SecurityStamp`, `ConcurrencyStamp`, `PhoneNumber`,
@@ -59,7 +59,7 @@ VALUES (7, 'Hạ', NULL, 'Bùi', 0, NULL, 'HẠ BÙI', NULL, 0, NULL, NULL, NULL
         CAST('0001-01-01T00:00:00.0000000' AS DATETIME(6)), NULL, CAST('0001-01-01T00:00:00.0000000' AS DATETIME(6)), 1,
         '677SG', '677SG', 'tanhank2k@gmail.com', 'TANHANK2K@GMAIL.COM', 1, NULL, 'CFYSFS3EWCVKRDJ3ZEDQDCBTD3M3H233',
         'd77c2641-8c78-43ce-b550-0af5c991f801', NULL, 0, 0, NULL, 1, 0, '1', NULL, 0);
-INSERT into Users (`Id`, `FirstName`, `MiddleName`, `LastName`, `Gender`, `Address`, `NormalizedDisplayName`,
+INSERT Users (`Id`, `FirstName`, `MiddleName`, `LastName`, `Gender`, `Address`, `NormalizedDisplayName`,
               `PersonalEmail`, `PersonalEmailConfirmed`, `NormalizedPersonalEmail`, `PersonalPhoneNumber`, `CreateBy`,
               `CreateOn`, `UpdateBy`, `UpdateOn`, `UserStatus`, `UserName`, `NormalizedUserName`, `Email`,
               `NormalizedEmail`, `EmailConfirmed`, `PasswordHash`, `SecurityStamp`, `ConcurrencyStamp`, `PhoneNumber`,
@@ -69,7 +69,7 @@ VALUES (8, 'Anh Hữu', NULL, 'Phạm', 0, NULL, 'ANH HỮU PHẠM', NULL, 0, NU
         CAST('0001-01-01T00:00:00.0000000' AS DATETIME(6)), NULL, CAST('0001-01-01T00:00:00.0000000' AS DATETIME(6)), 1,
         'I59EY', 'I59EY', 'anhhuuqb@gmail.com', 'ANHHUUQB@GMAIL.COM', 1, NULL, 'NVLV4S2QYHXW5JYHL2VCSTDGVSMTLK3D',
         '9a64d15c-c7b1-43e6-a02c-1f463c5021c4', NULL, 0, 0, NULL, 1, 0, NULL, NULL, 0);
-INSERT into Users (`Id`, `FirstName`, `MiddleName`, `LastName`, `Gender`, `Address`, `NormalizedDisplayName`,
+INSERT Users (`Id`, `FirstName`, `MiddleName`, `LastName`, `Gender`, `Address`, `NormalizedDisplayName`,
               `PersonalEmail`, `PersonalEmailConfirmed`, `NormalizedPersonalEmail`, `PersonalPhoneNumber`, `CreateBy`,
               `CreateOn`, `UpdateBy`, `UpdateOn`, `UserStatus`, `UserName`, `NormalizedUserName`, `Email`,
               `NormalizedEmail`, `EmailConfirmed`, `PasswordHash`, `SecurityStamp`, `ConcurrencyStamp`, `PhoneNumber`,
@@ -80,7 +80,7 @@ VALUES (9, 'Pham', NULL, 'Huu', 0, NULL, 'PHAM HUU', NULL, 0, NULL, NULL, NULL,
         'Y0HBC', 'Y0HBC', 'truongsahoangsalacuavietnamnhe@gmail.com', 'TRUONGSAHOANGSALACUAVIETNAMNHE@GMAIL.COM', 1,
         NULL, 'ZYFRF2IIWFXG3VISXNTIG2ZACSP6AWEY', 'b7d94987-aa7e-45cd-8d0b-df71fc63fa67', NULL, 0, 0, NULL, 1, 0, NULL,
         NULL, 0);
-INSERT into Users (`Id`, `FirstName`, `MiddleName`, `LastName`, `Gender`, `Address`, `NormalizedDisplayName`,
+INSERT Users (`Id`, `FirstName`, `MiddleName`, `LastName`, `Gender`, `Address`, `NormalizedDisplayName`,
               `PersonalEmail`, `PersonalEmailConfirmed`, `NormalizedPersonalEmail`, `PersonalPhoneNumber`, `CreateBy`,
               `CreateOn`, `UpdateBy`, `UpdateOn`, `UserStatus`, `UserName`, `NormalizedUserName`, `Email`,
               `NormalizedEmail`, `EmailConfirmed`, `PasswordHash`, `SecurityStamp`, `ConcurrencyStamp`, `PhoneNumber`,
@@ -93,7 +93,7 @@ VALUES (10, 'Phạm', 'Minh ', 'Anh Hữu', 0, NULL, 'PHẠM MINH  ANH HỮU', N
         'AQAAAAEAACcQAAAAEC1eQQKzphtBc8lVvQhrhsGO/p7mQkHhTdSWfhIXK+vhmAgKAZOOvPhL6ajc+yaozg==',
         'VWM2DABZEF52XZOTNMYTD2MFXMAL7CBF', 'ddd461eb-e711-4a93-be11-27437d18c9fa', '0854503234', 0, 0, NULL, 1, 0,
         NULL, NULL, 0);
-INSERT into Users (`Id`, `FirstName`, `MiddleName`, `LastName`, `Gender`, `Address`, `NormalizedDisplayName`,
+INSERT Users (`Id`, `FirstName`, `MiddleName`, `LastName`, `Gender`, `Address`, `NormalizedDisplayName`,
               `PersonalEmail`, `PersonalEmailConfirmed`, `NormalizedPersonalEmail`, `PersonalPhoneNumber`, `CreateBy`,
               `CreateOn`, `UpdateBy`, `UpdateOn`, `UserStatus`, `UserName`, `NormalizedUserName`, `Email`,
               `NormalizedEmail`, `EmailConfirmed`, `PasswordHash`, `SecurityStamp`, `ConcurrencyStamp`, `PhoneNumber`,
@@ -106,7 +106,7 @@ VALUES (11, 'Phạm', 'Minh ', 'Anh Hữu', 0, NULL, 'PHẠM MINH  ANH HỮU', N
         'AQAAAAEAACcQAAAAEB8lwjZ/rq6qMQtIfY7k6ij7QONraoyMVZ4z/sS2v1lsPKjIvgZN2fmHzoCa3fb1KA==',
         'AITJLCFDKTU6DQS4VKRVT76LYAMW2BQZ', 'd3ed6805-6315-43e9-a565-1a71bfe19188', '0854503234', 0, 0, NULL, 1, 0,
         NULL, NULL, 0);
-INSERT into Users (`Id`, `FirstName`, `MiddleName`, `LastName`, `Gender`, `Address`, `NormalizedDisplayName`,
+INSERT Users (`Id`, `FirstName`, `MiddleName`, `LastName`, `Gender`, `Address`, `NormalizedDisplayName`,
               `PersonalEmail`, `PersonalEmailConfirmed`, `NormalizedPersonalEmail`, `PersonalPhoneNumber`, `CreateBy`,
               `CreateOn`, `UpdateBy`, `UpdateOn`, `UserStatus`, `UserName`, `NormalizedUserName`, `Email`,
               `NormalizedEmail`, `EmailConfirmed`, `PasswordHash`, `SecurityStamp`, `ConcurrencyStamp`, `PhoneNumber`,
@@ -119,7 +119,7 @@ VALUES (14, 'le', 'quoc', 'le', 0, NULL, 'LE QUOC LE', NULL, 0, NULL, NULL, 'dun
         'AQAAAAEAACcQAAAAEAI8hbt0/WtrWxjv+Lwyj2/A+mFptLvmReaaaPnWYwLMUvpMYLkfj9Rb1rqKJnfsqw==',
         '37BB3K3YRHPRSYJYBYRRYJB35FGS5NWY', '3ea3fcca-ac00-4e49-bb41-99bb3d4f4396', '0971663834', 0, 0, NULL, 1, 0,
         NULL, NULL, 0);
-INSERT into Users (`Id`, `FirstName`, `MiddleName`, `LastName`, `Gender`, `Address`, `NormalizedDisplayName`,
+INSERT Users (`Id`, `FirstName`, `MiddleName`, `LastName`, `Gender`, `Address`, `NormalizedDisplayName`,
               `PersonalEmail`, `PersonalEmailConfirmed`, `NormalizedPersonalEmail`, `PersonalPhoneNumber`, `CreateBy`,
               `CreateOn`, `UpdateBy`, `UpdateOn`, `UserStatus`, `UserName`, `NormalizedUserName`, `Email`,
               `NormalizedEmail`, `EmailConfirmed`, `PasswordHash`, `SecurityStamp`, `ConcurrencyStamp`, `PhoneNumber`,

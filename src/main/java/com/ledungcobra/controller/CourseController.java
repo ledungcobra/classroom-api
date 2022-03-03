@@ -212,11 +212,11 @@ public class CourseController {
     }
 
     /**
-     * @param username
-     * @param courseId
+     * @param username is username of currentUser send request
+     * @param courseId course id user send to query
      * @param role         default none
      * @param isCheckOwner default false
-     * @return
+     * @return boolean
      */
     private boolean validateUserInClass(String username, int courseId, ERole role, boolean isCheckOwner) {
         var user = userService.findByUsername(username);
@@ -242,7 +242,10 @@ public class CourseController {
 
     @Secured(Constants.USER_ROLE)
     @DeleteMapping("/{id}/assignments/{assignmentId}")
-    public ResponseEntity<?> deleteAssignment(@PathVariable("id") Integer courseId, @PathVariable("assignmentId") Integer assignmentId, HttpServletRequest httpRequest, @RequestParam("CurrentUser") String currentUser) {
+    public ResponseEntity<?> deleteAssignment(@PathVariable("id") Integer courseId,
+                                              @PathVariable("assignmentId") Integer assignmentId,
+                                              HttpServletRequest httpRequest,
+                                              @RequestParam("CurrentUser") String currentUser) {
         var username = jwtUtils.getUserNameFromRequest(httpRequest);
         if (!validateUserInClass(username, courseId, ERole.Teacher, false)) {
             return ResponseEntity.ok()
@@ -382,7 +385,7 @@ public class CourseController {
         if (formDataUpload.getFile() == null) return badRequest().build();
         var assignment = assignmentRepository.findById(assignmentsId).orElseThrow(() -> new NotFoundException("Not found assignment by id " + assignmentsId));
 
-        try (var book = new XSSFWorkbook(formDataUpload.getFile().getInputStream());) {
+        try (var book = new XSSFWorkbook(formDataUpload.getFile().getInputStream())) {
 
             XSSFSheet sheet = book.getSheetAt(0);
 
@@ -432,7 +435,7 @@ public class CourseController {
     }
 
     private List<Student> convertFileToListStudents(XSSFWorkbook book) throws IOException {
-        try {
+        try{
             var sheet = book.getSheetAt(0);
             var list = new ArrayList<Student>();
             var next = true;
@@ -534,7 +537,7 @@ public class CourseController {
 
     @GetMapping("/{id}/download-grade-board")
     public ResponseEntity<?> getGradeBoard(@PathVariable("id") Integer id, HttpServletResponse response) throws IOException {
-        try (var book = new XSSFWorkbook();) {
+        try (var book = new XSSFWorkbook()) {
             XSSFSheet sheet = book.createSheet("GradeBoard");
             var result = courseService.findAllGradeOfCourse(id);
             var assignments = assignmentRepository.findByCourseId(id);
