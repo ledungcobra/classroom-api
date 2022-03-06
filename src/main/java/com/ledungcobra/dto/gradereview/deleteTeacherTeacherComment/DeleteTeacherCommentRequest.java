@@ -6,12 +6,15 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
+import javax.validation.constraints.NotNull;
 import java.io.Serializable;
 
 @EqualsAndHashCode(callSuper = true)
 @Data
 @NoArgsConstructor
 public class DeleteTeacherCommentRequest extends GradeReviewValidatorArgs implements Serializable {
+
+    @NotNull
     private Integer reviewCommentId;
 
     @Builder

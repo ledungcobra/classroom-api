@@ -11,7 +11,7 @@ import org.springframework.test.context.ActiveProfiles;
 
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@ActiveProfiles("test")
+@ActiveProfiles({"default","test"})
 @FlywayTest
 @ComponentScan(basePackages = {"com.ledungcobra.user", "com.ledungcobra.course", "com.ledungcobra.common", "com.ledungcobra.configuration.database"})
 class ClassRoleRepositoryTest {

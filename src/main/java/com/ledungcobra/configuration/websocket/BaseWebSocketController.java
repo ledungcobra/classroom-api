@@ -74,11 +74,12 @@ public abstract class BaseWebSocketController {
     }
 
     protected void sendMessageToClient(String receiver, String message) {
+
         try {
             if (!connections.containsKey(receiver)) {
                 return;
             }
-            template.convertAndSendToUser(connections.get(receiver).getName(), MESSAGES, message);
+            template.convertAndSendToUser(connections.get(receiver).getName(), getChannel(), message);
         } catch (MessagingException e) {
             e.printStackTrace();
         }
@@ -94,5 +95,6 @@ public abstract class BaseWebSocketController {
         exception.printStackTrace();
     }
 
+    protected abstract String getChannel();
 }
 

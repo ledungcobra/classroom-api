@@ -6,6 +6,7 @@ import com.ledungcobra.course.entity.Grade;
 import com.ledungcobra.course.entity.GradeReview;
 import com.ledungcobra.course.entity.ReviewComment;
 import com.ledungcobra.course.entity.Student;
+import com.ledungcobra.course.repository.GradeRepository;
 import com.ledungcobra.course.repository.GradeReviewRepository;
 import com.ledungcobra.course.repository.ReviewCommentRepository;
 import com.ledungcobra.exception.NotFoundException;
@@ -23,6 +24,7 @@ public class GradeReviewServiceImpl implements GradeReviewService {
     private final GradeReviewRepository gradeReviewRepository;
     private final ReviewCommentRepository reviewCommentRepository;
     private final EntityManager entityManager;
+    private final GradeRepository gradeRepository;
 
     @Override
     public GradeReview findById(int gradeReviewId) {
@@ -51,6 +53,13 @@ public class GradeReviewServiceImpl implements GradeReviewService {
         var gradeReview = gradeReviewRepository.findById(gradeReviewId).orElseThrow(() -> new NotFoundException("Not found grade review"));
         gradeReview.setStatus(Integer.valueOf(approvalStatus));
         gradeReviewRepository.save(AuditUtils.updateAudit(gradeReview, currentUser));
+
+        if (approvalStatus == EGradeReviewStatus.Approve.getValue()) {
+            var grade = gradeReview.getGrade();
+            grade.setGradeAssignment(gradeReview.getGradeExpect());
+            gradeRepository.save(AuditUtils.updateAudit(grade, currentUser));
+        }
+
     }
 
     @Override

@@ -16,11 +16,11 @@ import java.io.Serializable;
 @AllArgsConstructor
 public class CourseResponse implements Serializable {
 
-    private int id;
-    private int gradeId;
+    private Integer id;
+    private Integer gradeId;
     private String title;
     private String classCode;
-    private int credit;
+    private Integer credit;
     private String description;
     private String schedule;
     private String owner;

@@ -50,10 +50,12 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.annotation.Secured;
 import org.springframework.util.StringUtils;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.validation.Valid;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.Serializable;
@@ -125,19 +127,12 @@ public class CourseController {
         if (currentUser == null) return getNotFoundCurrentUser();
         Course foundCourse = courseService.findCourseById(currentUser, id);
         if (foundCourse == null) {
-            return new ResponseEntity<>(
-                    CommonResponse.builder().status(EStatus.Error).result(EResult.Error).message("Class not found").content("").build(),
-                    HttpStatus.NOT_FOUND);
+            return new ResponseEntity<>(CommonResponse.builder().status(EStatus.Error).result(EResult.Error).message("Class not found").content("").build(), HttpStatus.NOT_FOUND);
         }
 
         CourseUser courseUser = courseUserRepository.findCourseUserByUserIdAndCourseId(user.getId(), foundCourse.getId());
-        var response = CourseWrapperResponse.builder()
-                .course(new CourseResponse(foundCourse))
-                .role(courseUser.getRole().getId())
-                .build();
-        return ok(CommonResponse.builder().status(EStatus.Success).result(EResult.Successful).message("Get course success")
-                .content(response)
-                .build());
+        var response = CourseWrapperResponse.builder().course(new CourseResponse(foundCourse)).role(courseUser.getRole().getId()).build();
+        return ok(CommonResponse.builder().status(EStatus.Success).result(EResult.Successful).message("Get course success").content(response).build());
     }
 
     @Secured(Constants.USER_ROLE)
@@ -145,12 +140,7 @@ public class CourseController {
     public ResponseEntity<?> getAssignmentsOfCourse(HttpServletRequest httpRequest, @PathVariable("id") Integer courseId, @RequestParam(value = "Name", required = false) String name, @RequestParam(value = "StartAt", required = false) Integer startAt, @RequestParam(value = "MaxResults", required = false) Integer maxResults, @RequestParam(value = "SortColumn", required = false) String sortColumn) {
         var currentUser = jwtUtils.getUserNameFromRequest(httpRequest);
         if (!validateUserInClass(currentUser, courseId, ERole.None, false)) {
-            return ok(CommonResponse.builder()
-                    .status(EStatus.Error)
-                    .result(EResult.Error)
-                    .content("")
-                    .message("Permission denied!!")
-                    .build());
+            return ok(CommonResponse.builder().status(EStatus.Error).result(EResult.Error).content("").message("Permission denied!!").build());
         }
 
         name = name == null ? "%%" : "%" + name + "%";
@@ -165,43 +155,33 @@ public class CourseController {
 
     @Secured(Constants.USER_ROLE)
     @PostMapping(value = "/{id}/assignments")
-    public ResponseEntity<?> createNewAssignment(
-            @PathVariable("id") Integer courseId,
-            HttpServletRequest httpServletRequest, @RequestBody CreateNewAssignmentsRequest request) {
+    public ResponseEntity<?> createNewAssignment(@PathVariable("id") Integer courseId, HttpServletRequest httpServletRequest, @RequestBody @Valid CreateNewAssignmentsRequest request, BindingResult result) {
+
+        if (result.hasErrors()) {
+            return CommonResponse.buildError(result);
+        }
         var currentUser = jwtUtils.getUserNameFromRequest(httpServletRequest);
 
         if (!validateUserInClass(currentUser, courseId, ERole.Teacher, false)) {
-            return ok(CommonResponse.builder()
-                    .status(EStatus.Error)
-                    .result(EResult.Error)
-                    .content("")
-                    .message("Create assignment is not permitted")
-                    .build());
+            return ok(CommonResponse.builder().status(EStatus.Error).result(EResult.Error).content("").message("Create assignment is not permitted").build());
         }
 
         CreateNewAssignmentArgs args = ReflectionUtils.mapFrom(request);
         var assignment = courseService.createAssignment(args);
-        return ok(CommonResponse.builder()
-                .status(EStatus.Success)
-                .result(EResult.Successful)
-                .message("Create new assignment successfully")
-                .content(new AssignmentResponse(assignment))
-                .build());
+        return ok(CommonResponse.builder().status(EStatus.Success).result(EResult.Successful).message("Create new assignment successfully").content(new AssignmentResponse(assignment)).build());
     }
 
     @Secured(Constants.USER_ROLE)
     @PutMapping("/{id}/assignments/{assignmentId}")
-    public ResponseEntity<?> updateAssignment(HttpServletRequest httpRequest, @PathVariable("id") Integer courseId, @PathVariable("assignmentId") Integer assignmentId, @RequestBody UpdateAssignmentsRequest request) {
+    public ResponseEntity<?> updateAssignment(HttpServletRequest httpRequest, @PathVariable("id") Integer courseId, @PathVariable("assignmentId") Integer assignmentId, @RequestBody @Valid UpdateAssignmentsRequest request, BindingResult result) {
+        if (result.hasErrors()) {
+            return CommonResponse.buildError(result);
+        }
         var currentUser = jwtUtils.getUserNameFromRequest(httpRequest);
         request.setCurrentUser(currentUser);
 
         if (!validateUserInClass(currentUser, courseId, ERole.Teacher, false)) {
-            return ok(CommonResponse.builder()
-                    .status(EStatus.Error)
-                    .result(EResult.Error)
-                    .content("")
-                    .message("Update assignment is not permitted")
-                    .build());
+            return ok(CommonResponse.builder().status(EStatus.Error).result(EResult.Error).content("").message("Update assignment is not permitted").build());
         }
         try {
             var updatedAssignment = new AssignmentResponse(courseService.updateAssignment(request, request.getCurrentUser(), assignmentId));
@@ -212,8 +192,8 @@ public class CourseController {
     }
 
     /**
-     * @param username is username of currentUser send request
-     * @param courseId course id user send to query
+     * @param username     is username of currentUser send request
+     * @param courseId     course id user send to query
      * @param role         default none
      * @param isCheckOwner default false
      * @return boolean
@@ -242,16 +222,10 @@ public class CourseController {
 
     @Secured(Constants.USER_ROLE)
     @DeleteMapping("/{id}/assignments/{assignmentId}")
-    public ResponseEntity<?> deleteAssignment(@PathVariable("id") Integer courseId,
-                                              @PathVariable("assignmentId") Integer assignmentId,
-                                              HttpServletRequest httpRequest,
-                                              @RequestParam("CurrentUser") String currentUser) {
+    public ResponseEntity<?> deleteAssignment(@PathVariable("id") Integer courseId, @PathVariable("assignmentId") Integer assignmentId, HttpServletRequest httpRequest, @RequestParam("CurrentUser") String currentUser) {
         var username = jwtUtils.getUserNameFromRequest(httpRequest);
         if (!validateUserInClass(username, courseId, ERole.Teacher, false)) {
-            return ResponseEntity.ok()
-                    .body(CommonResponse.builder().result(EResult.Error).status(EStatus.Error)
-                            .message("Delete assignment is not permitted").content("").build()
-                    );
+            return ResponseEntity.ok().body(CommonResponse.builder().result(EResult.Error).status(EStatus.Error).message("Delete assignment is not permitted").content("").build());
         }
         try {
             courseService.deleteAssignment(assignmentId);
@@ -264,15 +238,15 @@ public class CourseController {
 
     @Secured(Constants.USER_ROLE)
     @PostMapping("/{id}/assignments-sort")
-    public ResponseEntity<?> postSortAssignment(HttpServletRequest httpRequest, @PathVariable("id") Integer id, @RequestBody SortAssignmentRequest request) {
+    public ResponseEntity<?> postSortAssignment(HttpServletRequest httpRequest, @PathVariable("id") Integer id, @RequestBody @Valid SortAssignmentRequest request, BindingResult result) {
+
+        if (result.hasErrors()) {
+            return CommonResponse.buildError(result);
+        }
+
         var currentUser = jwtUtils.getUserNameFromRequest(httpRequest);
         if (!validateUserInClass(currentUser, id, ERole.None, false)) {
-            return ok(CommonResponse.builder()
-                    .status(EStatus.Error)
-                    .result(EResult.Error)
-                    .content("")
-                    .message("Permission denied for sorting assignments")
-                    .build());
+            return ok(CommonResponse.builder().status(EStatus.Error).result(EResult.Error).content("").message("Permission denied for sorting assignments").build());
         }
         if (request.getAssignmentSimples().size() != 2) {
             return ResponseEntity.badRequest().body(CommonResponse.builder().status(EStatus.Error).result(EResult.Error).message("AssignmentSimples must have the size of 2").content("").build());
@@ -294,23 +268,11 @@ public class CourseController {
     @GetMapping("/{id}/all-grades")
     public ResponseEntity<?> getAllGrades(@PathVariable("id") Integer courseId, @RequestParam("currentUser") String currentUser) {
         if (!validateUserInClass(currentUser, courseId, ERole.Teacher, false)) {
-            return ok(CommonResponse.builder()
-                    .status(EStatus.Error)
-                    .result(EResult.Error)
-                    .content("")
-                    .message("Grade all grades failed!!")
-                    .build());
+            return ok(CommonResponse.builder().status(EStatus.Error).result(EResult.Error).content("").message("Grade all grades failed!!").build());
         }
         Course course = courseService.findCourseById(currentUser, courseId);
         if (course == null) {
-            return ResponseEntity.badRequest()
-                    .body(CommonResponse.builder()
-                            .message(String.format("Not found course by id %d", courseId))
-                            .content("")
-                            .status(EStatus.Error)
-                            .result(EResult.Error)
-                            .build()
-                    );
+            return ResponseEntity.badRequest().body(CommonResponse.builder().message(String.format("Not found course by id %d", courseId)).content("").status(EStatus.Error).result(EResult.Error).build());
         }
 
         var assignments = course.getAssignments().stream().map(AssignmentResponse::new).toList();
@@ -325,12 +287,7 @@ public class CourseController {
     public ResponseEntity<?> getGradeByStudent(@PathVariable("id") Integer courseId, HttpServletRequest httpRequest) throws NotFoundException {
         var currentUser = jwtUtils.getUserNameFromRequest(httpRequest);
         if (!validateUserInClass(currentUser, courseId, ERole.Student)) {
-            return ok(CommonResponse.builder()
-                    .status(EStatus.Error)
-                    .result(EResult.Error)
-                    .content("")
-                    .message("Permission denied for get all grade of student ")
-                    .build());
+            return ok(CommonResponse.builder().status(EStatus.Error).result(EResult.Error).content("").message("Permission denied for get all grade of student ").build());
         }
 
         var user = userService.findByUsername(currentUser);
@@ -347,12 +304,7 @@ public class CourseController {
     public ResponseEntity<?> getAllGradesV2(@PathVariable("id") Integer id, @PathVariable("assignmentId") Integer assignmentId, @RequestParam(value = "currentUser", required = false) String currentUser, HttpServletRequest httpRequest) {
         currentUser = jwtUtils.getUserNameFromRequest(httpRequest);
         if (!validateUserInClass(currentUser, id, ERole.Teacher)) {
-            return ok(CommonResponse.builder()
-                    .status(EStatus.Error)
-                    .result(EResult.Error)
-                    .content("")
-                    .message("Get all grade assignments failed!!")
-                    .build());
+            return ok(CommonResponse.builder().status(EStatus.Error).result(EResult.Error).content("").message("Get all grade assignments failed!!").build());
         }
         var result = courseService.getAllGradeAssignment(assignmentId);
         return ResponseEntity.ok().body(CommonResponse.builder().content(DataResponse.builder().data(result).total(result.size()).build()).message("Get assignment grade successfully").status(EStatus.Success).result(EResult.Successful).build());
@@ -417,17 +369,13 @@ public class CourseController {
 
     @Secured(Constants.USER_ROLE)
     @PostMapping(value = "/{id}/update-student", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<?> postUpdateStudentList(@PathVariable("id") Integer courseId,
-                                                   @ModelAttribute FormDataUpload formDataUpload,
-                                                   HttpServletRequest request) throws IOException {
+    public ResponseEntity<?> postUpdateStudentList(@PathVariable("id") Integer courseId, @ModelAttribute @Valid FormDataUpload formDataUpload, BindingResult result, HttpServletRequest request) throws IOException {
+        if (result.hasErrors()) {
+            return CommonResponse.buildError(result);
+        }
         var currentUser = jwtUtils.getUserNameFromRequest(request);
         if (!validateUserInClass(currentUser, courseId, ERole.None, true)) {
-            return ok(CommonResponse.builder()
-                    .status(EStatus.Error)
-                    .result(EResult.Error)
-                    .content("")
-                    .message("Update student failed because of permission denied!!")
-                    .build());
+            return ok(CommonResponse.builder().status(EStatus.Error).result(EResult.Error).content("").message("Update student failed because of permission denied!!").build());
         }
         var studentList = convertFileToListStudents(new XSSFWorkbook(formDataUpload.getFile().getInputStream()));
         courseService.updateStudentsInCourse(studentList, courseId, currentUser);
@@ -435,7 +383,7 @@ public class CourseController {
     }
 
     private List<Student> convertFileToListStudents(XSSFWorkbook book) throws IOException {
-        try{
+        try {
             var sheet = book.getSheetAt(0);
             var list = new ArrayList<Student>();
             var next = true;
@@ -455,16 +403,15 @@ public class CourseController {
 
     @Secured(Constants.USER_ROLE)
     @PostMapping("/{id}/assignments/{assignmentsId}/update-grade-normal")
-    public ResponseEntity<?> postUpdateAssignmentNormal(@PathVariable("id") Integer courseId, @PathVariable("assignmentsId") Integer assignmentsId, @RequestBody UpdateGradeNormalRequest request, HttpServletRequest httpServletRequest) {
+    public ResponseEntity<?> postUpdateAssignmentNormal(@PathVariable("id") Integer courseId, @PathVariable("assignmentsId") Integer assignmentsId, @RequestBody @Valid UpdateGradeNormalRequest request, BindingResult result, HttpServletRequest httpServletRequest) {
+        if (result.hasErrors()) {
+            return CommonResponse.buildError(result);
+        }
+
         var currentUser = jwtUtils.getUserNameFromRequest(httpServletRequest);
         request.setCurrentUser(currentUser);
         if (!validateUserInClass(request.getCurrentUser(), courseId, ERole.Teacher)) {
-            return ok(CommonResponse.builder()
-                    .status(EStatus.Error)
-                    .result(EResult.Error)
-                    .content("")
-                    .message("Permission denied for update grade for all ")
-                    .build());
+            return ok(CommonResponse.builder().status(EStatus.Error).result(EResult.Error).content("").message("Permission denied for update grade for all ").build());
         }
         var success = courseService.updateGradeNormal(request, assignmentsId, courseId);
         if (success) {
@@ -484,12 +431,7 @@ public class CourseController {
     public ResponseEntity<?> postUpdateGradeFinalized(@PathVariable("id") Integer courseId, @PathVariable("assignmentsId") Integer assignmentsId, @RequestBody UpdateGradeSpecificRequest request, HttpServletRequest httpServletRequest) throws NotFoundException {
         request.setCurrentUser(jwtUtils.getUserNameFromRequest(httpServletRequest));
         if (!validateUserInClass(request.getCurrentUser(), courseId, ERole.Teacher)) {
-            return ok(CommonResponse.builder()
-                    .status(EStatus.Error)
-                    .result(EResult.Error)
-                    .content("")
-                    .message("Permission denied for update grade for specific ")
-                    .build());
+            return ok(CommonResponse.builder().status(EStatus.Error).result(EResult.Error).content("").message("Permission denied for update grade for specific ").build());
         }
         var result = courseService.updateGradeSpecific(UpdateGradeSpecificArgs.builder().courseId(courseId).assignmentId(assignmentsId).isFinalized(request.getIsFinalized()).gradeAssignment(request.getGrade()).mssv(request.getMssv()).currentUser(request.getCurrentUser()).build());
         var studentUser = userService.findByStudentCode(request.getMssv());
@@ -505,7 +447,12 @@ public class CourseController {
 
     @Secured(Constants.USER_ROLE)
     @PostMapping(value = "/send-mail", consumes = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<?> postSendMail(@RequestBody SendMailJoinToCourseRequest request) {
+    public ResponseEntity<?> postSendMail(@RequestBody @Valid SendMailJoinToCourseRequest request, BindingResult result) {
+
+        if (result.hasErrors()) {
+            return CommonResponse.buildError(result);
+        }
+
         var tokenClassCode = StringHelper.generateHashString(request.getClassCode());
         var tokenEmail = StringHelper.generateHashString(request.getMailPersonReceive());
         var inviteLink = String.format("%s/class-join?classToken=%s&role=%s&email=%s", URL_CLIENT, tokenClassCode, request.getRole(), tokenEmail);
@@ -521,17 +468,7 @@ public class CourseController {
         var listStudent = courseService.getStudents(courseId);
         var course = courseService.findCourseById(currentUser, courseId);
         if (course == null) return notFound().build();
-        return ok(CommonResponse.builder()
-                .status(EStatus.Success)
-                .result(EResult.Successful)
-                .message("Get members in course successfully")
-                .content(MemberCourseResponse.builder()
-                        .total(listStudent.size() + listTeachers.size())
-                        .owner(course.getCreateBy())
-                        .teachers(listTeachers)
-                        .students(listStudent)
-                        .build())
-                .build());
+        return ok(CommonResponse.builder().status(EStatus.Success).result(EResult.Successful).message("Get members in course successfully").content(MemberCourseResponse.builder().total(listStudent.size() + listTeachers.size()).owner(course.getCreateBy()).teachers(listTeachers).students(listStudent).build()).build());
     }
 
 
@@ -574,7 +511,11 @@ public class CourseController {
     // TODO testing
     @Secured(Constants.USER_ROLE)
     @PostMapping("/add-member/invite-link")
-    public ResponseEntity<?> addStudentIntoCourseByLink(@RequestBody AddMemberIntoCourseByLinkRequest request, HttpServletRequest httpServletRequest) {
+    public ResponseEntity<?> addStudentIntoCourseByLink(@RequestBody @Valid AddMemberIntoCourseByLinkRequest request, BindingResult result, HttpServletRequest httpServletRequest) {
+        if (result.hasErrors()) {
+            return CommonResponse.buildError(result);
+        }
+
         var currentUser = jwtUtils.getUserNameFromRequest(httpServletRequest);
         request.setCurrentUser(currentUser);
         var user = AuthenticationUtils.appUserDetails().unwrap();
@@ -590,183 +531,104 @@ public class CourseController {
         var courseUser = courseUserRepository.findCourseUserByUserIdAndCourseId(user.getId(), course.getId());
 
         if (courseUser != null) {
-            return ok(CommonResponse.builder()
-                    .content("")
-                    .result(EResult.Error)
-                    .status(EStatus.Error)
-                    .message("Already join class")
-                    .build());
+            return ok(CommonResponse.builder().content("").result(EResult.Error).status(EStatus.Error).message("Already join class").build());
         }
 
         if (!StringUtils.hasText(request.getInvitee())) {
             if (courseService.addMemberIntoCourse(user, request.getRole(), course.getId())) {
-                return ok(CommonResponse.builder().status(EStatus.Success)
-                        .result(EResult.Successful).content("").message("Add member successfully").build());
+                return ok(CommonResponse.builder().status(EStatus.Success).result(EResult.Successful).content("").message("Add member successfully").build());
             } else {
-                return ok(CommonResponse.builder()
-                        .status(EStatus.Error)
-                        .result(EResult.Error)
-                        .content("")
-                        .message("Add member failed")
-                        .build());
+                return ok(CommonResponse.builder().status(EStatus.Error).result(EResult.Error).content("").message("Add member failed").build());
             }
         }
         var invitee = userService.findByUsername(request.getInvitee());
         if (invitee == null) {
-            return ok(
-                    CommonResponse.builder()
-                            .status(EStatus.Error)
-                            .result(EResult.Error)
-                            .content("")
-                            .message("Not found invitee user")
-                            .build()
-            );
+            return ok(CommonResponse.builder().status(EStatus.Error).result(EResult.Error).content("").message("Not found invitee user").build());
         }
 
         if (courseService.addMemberIntoCourse(invitee.getId(), user.getUserName(), request.getRole(), course.getId())) {
-            return ok(CommonResponse.builder().status(EStatus.Success)
-                    .result(EResult.Successful).content("").message("Add member successfully").build());
+            return ok(CommonResponse.builder().status(EStatus.Success).result(EResult.Successful).content("").message("Add member successfully").build());
         } else {
-            return ok(CommonResponse.builder()
-                    .status(EStatus.Error)
-                    .result(EResult.Error)
-                    .content("")
-                    .message("Add member failed")
-                    .build());
+            return ok(CommonResponse.builder().status(EStatus.Error).result(EResult.Error).content("").message("Add member failed").build());
         }
     }
 
     @Secured(Constants.USER_ROLE)
     @PostMapping("/update-role-member")
-    public ResponseEntity<?> updateRoleMember(@RequestBody UpdateRoleMemberInCourseRequest request, HttpServletRequest httpServletRequest) {
+    public ResponseEntity<?> updateRoleMember(@RequestBody @Valid UpdateRoleMemberInCourseRequest request, BindingResult result, HttpServletRequest httpServletRequest) {
+
+        if (result.hasErrors()) {
+            return CommonResponse.buildError(result);
+        }
+
         var currentUser = jwtUtils.getUserNameFromRequest(httpServletRequest);
         var user = AuthenticationUtils.appUserDetails().unwrap();
         if (user == null) {
-            return ok(CommonResponse.builder()
-                    .status(EStatus.Error)
-                    .result(EResult.Error)
-                    .content("")
-                    .message("Not found user")
-                    .build());
+            return ok(CommonResponse.builder().status(EStatus.Error).result(EResult.Error).content("").message("Not found user").build());
         }
         var course = courseService.findCourseById(currentUser, request.getCourseId());
         if (course == null) {
-            return ok(CommonResponse.builder()
-                    .message(NOT_FOUND_COURSE_MSG)
-                    .content("")
-                    .status(EStatus.Error)
-                    .result(EResult.Error)
-                    .build());
+            return ok(CommonResponse.builder().message(NOT_FOUND_COURSE_MSG).content("").status(EStatus.Error).result(EResult.Error).build());
         }
 
         if (!Objects.equals(user.getUserName(), course.getCreateBy())) {
-            return ok(CommonResponse.builder()
-                    .status(EStatus.Error)
-                    .result(EResult.Error)
-                    .message("You are not the owner of this course")
-                    .content("")
-                    .build());
+            return ok(CommonResponse.builder().status(EStatus.Error).result(EResult.Error).message("You are not the owner of this course").content("").build());
         }
 
         var courseUser = courseUserRepository.findCourseUserByUserIdAndCourseId(request.getUserId(), request.getCourseId());
         if (courseUser == null) {
-            return ok(CommonResponse.builder()
-                    .status(EStatus.Error)
-                    .result(EResult.Error)
-                    .content("")
-                    .message("Not found user in class")
-                    .build());
+            return ok(CommonResponse.builder().status(EStatus.Error).result(EResult.Error).content("").message("Not found user in class").build());
         }
         courseService.updateRole(courseUser, request.getRole(), currentUser);
-        return ok(CommonResponse.builder()
-                .status(EStatus.Success)
-                .result(EResult.Successful)
-                .content("")
-                .message("Update role user success")
-                .build());
+        return ok(CommonResponse.builder().status(EStatus.Success).result(EResult.Successful).content("").message("Update role user success").build());
     }
 
     @Secured(Constants.USER_ROLE)
     @PostMapping("/remove-member")
-    public ResponseEntity<?> removeMember(@RequestBody RemoveMemberInCourseRequest request, HttpServletRequest httpServletRequest) {
+    public ResponseEntity<?> removeMember(@RequestBody @Valid RemoveMemberInCourseRequest request, BindingResult result, HttpServletRequest httpServletRequest) {
+
+        if (result.hasErrors()) {
+            return CommonResponse.buildError(result);
+        }
+
         var currentUser = jwtUtils.getUserNameFromRequest(httpServletRequest);
         request.setCurrentUser(currentUser);
 
         var user = userService.findByUsername(request.getCurrentUser());
         if (user == null) {
-            return ok(CommonResponse.builder()
-                    .message("Not found user")
-                    .content("")
-                    .status(EStatus.Error)
-                    .result(EResult.Error)
-                    .build());
+            return ok(CommonResponse.builder().message("Not found user").content("").status(EStatus.Error).result(EResult.Error).build());
         }
 
         var course = courseService.findCourseById(currentUser, request.getCourseId());
         if (course == null) {
-            return ok(CommonResponse.builder()
-                    .status(EStatus.Error)
-                    .result(EResult.Error)
-                    .content("")
-                    .message(NOT_FOUND_COURSE_MSG)
-                    .build());
+            return ok(CommonResponse.builder().status(EStatus.Error).result(EResult.Error).content("").message(NOT_FOUND_COURSE_MSG).build());
         }
 
         if (!Objects.equals(course.getCreateBy(), user.getUserName())) {
-            return ok(CommonResponse.builder()
-                    .status(EStatus.Error)
-                    .result(EResult.Error)
-                    .content("")
-                    .message("You are not the owner of the class")
-                    .build());
+            return ok(CommonResponse.builder().status(EStatus.Error).result(EResult.Error).content("").message("You are not the owner of the class").build());
         }
 
         var courseUser = courseUserRepository.findCourseUserByUserIdAndCourseId(request.getUserId(), request.getCourseId());
         if (courseUser == null) {
             var courseStudent = courseStudentRepository.findByStudentCode(request.getStudentId());
             if (courseStudent == null) {
-                return ok(CommonResponse.builder()
-                        .status(EStatus.Error)
-                        .result(EResult.Error)
-                        .content("")
-                        .message("Not found user in class")
-                        .build());
+                return ok(CommonResponse.builder().status(EStatus.Error).result(EResult.Error).content("").message("Not found user in class").build());
             } else {
                 try {
                     studentRepository.delete(courseStudent.getStudent());
-                    return ok(CommonResponse.builder()
-                            .status(EStatus.Error)
-                            .result(EResult.Error)
-                            .content("")
-                            .message("Xoá tài khoản thành công")
-                            .build());
+                    return ok(CommonResponse.builder().status(EStatus.Error).result(EResult.Error).content("").message("Xoá tài khoản thành công").build());
                 } catch (Exception e) {
                     log.error("Cannot delete {}", e.getMessage());
-                    return ok(CommonResponse.builder()
-                            .status(EStatus.Error)
-                            .result(EResult.Error)
-                            .content("")
-                            .message("Xoá tài khoản thành công")
-                            .build());
+                    return ok(CommonResponse.builder().status(EStatus.Error).result(EResult.Error).content("").message("Xoá tài khoản thành công").build());
                 }
             }
         }
         try {
             courseUserRepository.delete(courseUser);
-            return ok(CommonResponse.builder()
-                    .status(EStatus.Success)
-                    .result(EResult.Successful)
-                    .content("")
-                    .message("Delete member from class success")
-                    .build());
+            return ok(CommonResponse.builder().status(EStatus.Success).result(EResult.Successful).content("").message("Delete member from class success").build());
         } catch (Exception e) {
-            e.printStackTrace();
-            return ok(CommonResponse.builder()
-                    .status(EStatus.Error)
-                    .result(EResult.Error)
-                    .content("")
-                    .message("Cannot delete user " + e.getMessage())
-                    .build());
+            log.info("Msg {}", e.getMessage());
+            return ok(CommonResponse.builder().status(EStatus.Error).result(EResult.Error).content("").message("Cannot delete user " + e.getMessage()).build());
         }
     }
 

@@ -40,10 +40,15 @@ public class WsNotificationController extends BaseWebSocketController {
 
     @SneakyThrows
     public void sendNotification(Notification notification) {
-        sendMessageToClient(notification.getUserId(), objectMapper.writeValueAsString(MessageBody.builder()
+        sendMessageToClient(notification.getUserId(),
+                objectMapper.writeValueAsString(MessageBody.builder()
                 .channel(NOTIFICATION)
                 .data(MessageBody.fromObject(notification))
                 .build()));
     }
 
+    @Override
+    protected String getChannel() {
+        return NOTIFICATIONS;
+    }
 }

@@ -30,14 +30,12 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.util.StringUtils;
 import org.springframework.validation.BindingResult;
-import org.springframework.validation.ObjectError;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.validation.Valid;
 import java.net.URI;
 import java.util.Objects;
-import java.util.stream.Collectors;
 
 import static com.ledungcobra.common.Constants.ADMIN_ROLE;
 import static com.ledungcobra.common.Constants.USER_ROLE;
@@ -97,39 +95,31 @@ public class UserController {
     public ResponseEntity<?> login(@RequestBody @Valid LoginRequest loginRequest, BindingResult bindingResult) throws Exception {
 
         if (bindingResult.hasErrors()) {
-            return badRequest().body(
-                    CommonResponse.builder()
-                            .status(EStatus.Error)
-                            .result(EResult.Error)
-                            .content(String.join(",",
-                                    bindingResult.getAllErrors().stream().map(ObjectError::toString)
-                                            .collect(Collectors.toSet())))
-                            .build()
-            );
-        } else {
-            var user = userService.findByUsername(loginRequest.getUsername());
-            Authentication authenticate = authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(user.getUserName(), loginRequest.getPassword()));
-            SecurityContextHolder.getContext().setAuthentication(authenticate);
-
-            var appUserDetails = switch (authenticate.getPrincipal()) {
-                case AppUserDetails userDetails -> userDetails;
-                default -> throw new NotFoundException("Login failt");
-            };
-
-            return ok(CommonResponse.builder()
-                    .result(EResult.Successful)
-                    .status(EStatus.Success)
-                    .content(LoginResponse.builder()
-                            .email(user.getEmail())
-                            .id(user.getId())
-                            .fullName(user.getNormalizedDisplayName())
-                            .token(jwtUtils.generateToken(appUserDetails))
-                            .username(user.getUserName())
-                            .refreshToken(jwtUtils.generateRefreshToken(appUserDetails))
-                            .build())
-                    .message(LOGIN_SUCCESS_MSG)
-                    .build());
+            return CommonResponse.buildError(bindingResult);
         }
+        var user = userService.findByUsername(loginRequest.getUsername());
+        Authentication authenticate = authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(user.getUserName(), loginRequest.getPassword()));
+        SecurityContextHolder.getContext().setAuthentication(authenticate);
+
+        var appUserDetails = switch (authenticate.getPrincipal()) {
+            case AppUserDetails userDetails -> userDetails;
+            default -> throw new NotFoundException("Login failt");
+        };
+
+        return ok(CommonResponse.builder()
+                .result(EResult.Successful)
+                .status(EStatus.Success)
+                .content(LoginResponse.builder()
+                        .email(user.getEmail())
+                        .id(user.getId())
+                        .fullName(user.getNormalizedDisplayName())
+                        .token(jwtUtils.generateToken(appUserDetails))
+                        .username(user.getUserName())
+                        .refreshToken(jwtUtils.generateRefreshToken(appUserDetails))
+                        .build())
+                .message(LOGIN_SUCCESS_MSG)
+                .build());
+
     }
 
     /**
@@ -184,7 +174,12 @@ public class UserController {
 
     @Secured({ADMIN_ROLE, USER_ROLE})
     @PostMapping("/change-password")
-    public ResponseEntity<?> changePassword(@RequestBody ChangePasswordRequest request, HttpServletRequest httpServletRequest) {
+    public ResponseEntity<?> changePassword(@RequestBody @Valid ChangePasswordRequest request,
+                                            BindingResult result
+    ) {
+        if (result.hasErrors()) {
+            return CommonResponse.buildError(result);
+        }
 
         AppUserDetails userDetails = AuthenticationUtils.appUserDetails();
         var plainOldPassword = request.getCurrentPassword();
@@ -265,7 +260,12 @@ public class UserController {
     }
 
     @PostMapping("reset-password")
-    public ResponseEntity<?> resetPassword(@RequestBody ResetPasswordRequest request) {
+    public ResponseEntity<?> resetPassword(@RequestBody @Valid ResetPasswordRequest request, BindingResult result) {
+
+        if (result.hasErrors()) {
+            return CommonResponse.buildError(result);
+        }
+
         var user = userService.findByEmail(request.getEmail());
         if (user == null) {
             return ok(CommonResponse.builder()

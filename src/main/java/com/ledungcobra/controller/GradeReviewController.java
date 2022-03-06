@@ -40,10 +40,11 @@ import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
-import java.io.Serializable;
+import javax.validation.Valid;
 import java.util.HashMap;
 import java.util.Objects;
 
@@ -132,7 +133,14 @@ public class GradeReviewController {
 
 
     @PostMapping("")
-    public ResponseEntity<?> postCreateGradeReview(@RequestBody CreateGradeReviewRequest request, HttpServletRequest httpServletRequest) throws NotFoundException {
+    public ResponseEntity<?> postCreateGradeReview(@RequestBody @Valid CreateGradeReviewRequest request,
+                                                   BindingResult result,
+                                                   HttpServletRequest httpServletRequest) throws NotFoundException {
+
+        if (result.hasErrors()) {
+            return CommonResponse.buildError(result);
+        }
+
         var currentUser = jwtUtils.getUserNameFromRequest(httpServletRequest);
         var user = AuthenticationUtils.appUserDetails().unwrap();
         var badRequest = ok(CommonResponse.builder().status(EStatus.Error).result(EResult.Error)
@@ -168,9 +176,15 @@ public class GradeReviewController {
     }
 
     @PostMapping("/approval")
-    public ResponseEntity<?> postApproveGradeReview(@RequestBody ApprovalGradeReviewRequest request,
+    public ResponseEntity<?> postApproveGradeReview(@RequestBody @Valid ApprovalGradeReviewRequest request,
+                                                    BindingResult result,
                                                     HttpServletRequest httpServletRequest
     ) throws NotFoundException {
+
+        if (result.hasErrors()) {
+            return CommonResponse.buildError(result);
+        }
+
         var user = AuthenticationUtils.appUserDetails().unwrap();
         var badRequest = ok(CommonResponse.builder().status(EStatus.Error).result(EResult.Error)
                 .content("").message("Approve grade review fail").build());
@@ -223,7 +237,12 @@ public class GradeReviewController {
     // TODO TESTING
     @PutMapping("/update")
     public ResponseEntity<?> putUpdateGradeReview(HttpServletRequest httpServletRequest,
-                                                  @RequestBody UpdateGradeReviewRequest request) {
+                                                  @RequestBody @Valid UpdateGradeReviewRequest request,
+                                                  BindingResult result) {
+        if (result.hasErrors()) {
+            return CommonResponse.buildError(result);
+        }
+
         var user = AuthenticationUtils.appUserDetails().unwrap();
         var currentUser = jwtUtils.getUserNameFromRequest(httpServletRequest);
         if (!validateGradeReviewOfUser(currentUser, request.getCourseId(), ERole.Teacher, false,
@@ -257,8 +276,13 @@ public class GradeReviewController {
 
     // TODO Testing
     @DeleteMapping("/delete")
-    public ResponseEntity<CommonResponse<Serializable>> deleteGradeReview(HttpServletRequest httpRequest,
-                                                                          @RequestBody DeleteGradeReviewRequest request) {
+    public ResponseEntity<?> deleteGradeReview(HttpServletRequest httpRequest,
+                                               @RequestBody @Valid DeleteGradeReviewRequest request,
+                                               BindingResult result) {
+        if (result.hasErrors()) {
+            return CommonResponse.buildError(result);
+        }
+
         var currentUser = jwtUtils.getUserNameFromRequest(httpRequest);
         var badRequest = ok(CommonResponse.builder()
                 .status(EStatus.Error)
@@ -284,7 +308,15 @@ public class GradeReviewController {
 
     // TODO TESTING
     @PostMapping("/teacher-comment")
-    public ResponseEntity<CommonResponse<?>> postTeacherComment(@RequestBody CreateTeacherCommentRequest request, HttpServletRequest httpServletRequest) {
+    public ResponseEntity<CommonResponse<?>> postTeacherComment(@RequestBody @Valid CreateTeacherCommentRequest request,
+                                                                BindingResult result,
+                                                                HttpServletRequest httpServletRequest
+    ) {
+
+        if (result.hasErrors()) {
+            return CommonResponse.buildError(result);
+        }
+
         var currentUser = jwtUtils.getUserNameFromRequest(httpServletRequest);
         var user = AuthenticationUtils.appUserDetails().unwrap();
         if (!validateGradeReviewOfUser(currentUser, request.getCourseId(), ERole.Teacher, false, request.getGradeId(), request.getGradeReviewId())) {
@@ -333,7 +365,13 @@ public class GradeReviewController {
     // TODO TESTING
     @PutMapping("/teacher-comment/update")
     public ResponseEntity<?> putTeacherUpdateComment(HttpServletRequest httpServletRequest,
-                                                     @RequestBody UpdateCommentRequest request) {
+                                                     @RequestBody @Valid UpdateCommentRequest request,
+                                                     BindingResult result) {
+
+        if (result.hasErrors()) {
+            return CommonResponse.buildError(result);
+        }
+
         var currentUser = jwtUtils.getUserNameFromRequest(httpServletRequest);
         var user = AuthenticationUtils.appUserDetails().unwrap();
 
@@ -380,7 +418,11 @@ public class GradeReviewController {
     // TODO TESTING
     @DeleteMapping("/teacher-comment/delete")
     public ResponseEntity<?> deleteTeacherTeacherComment(HttpServletRequest httpServletRequest,
-                                                         @RequestBody DeleteTeacherCommentRequest request) {
+                                                         @RequestBody @Valid DeleteTeacherCommentRequest request,
+                                                         BindingResult result) {
+        if (result.hasErrors()) {
+            return CommonResponse.buildError(result);
+        }
         var user = AuthenticationUtils.appUserDetails().unwrap();
         var currentUser = jwtUtils.getUserNameFromRequest(httpServletRequest);
         if (!validateGradeReviewOfUser(currentUser, request.getCourseId(), ERole.Teacher, false, request.getGradeId(), request.getGradeReviewId())) {
@@ -424,7 +466,13 @@ public class GradeReviewController {
 
     // TODO Testing
     @PostMapping("/student-comment")
-    public ResponseEntity<?> postStudentComment(@RequestBody CreateStudentCommentRequest request, HttpServletRequest httpServletRequest) throws NotFoundException {
+    public ResponseEntity<?> postStudentComment(@RequestBody @Valid CreateStudentCommentRequest request,
+                                                BindingResult result,
+                                                HttpServletRequest httpServletRequest) throws NotFoundException {
+        if (result.hasErrors()) {
+            return CommonResponse.buildError(result);
+        }
+
         var currentUser = jwtUtils.getUserNameFromRequest(httpServletRequest);
         var user = AuthenticationUtils.appUserDetails().unwrap();
         if (!validateGradeReviewOfUser(currentUser, request, ERole.Student, false)) {
@@ -461,8 +509,14 @@ public class GradeReviewController {
 
     // TODO Testing
     @PutMapping("/student-comment/update")
-    public ResponseEntity<?> putStudentUpdateComment(@RequestBody StudentUpdateCommentRequest request,
+    public ResponseEntity<?> putStudentUpdateComment(@RequestBody @Valid StudentUpdateCommentRequest request,
+                                                     BindingResult result,
                                                      HttpServletRequest httpServletRequest) {
+
+        if (result.hasErrors()) {
+            return CommonResponse.buildError(result);
+        }
+
         var currentUser = jwtUtils.getUserNameFromRequest(httpServletRequest);
         var user = AuthenticationUtils.appUserDetails().unwrap();
         if (!validateGradeReviewOfUser(currentUser, request, ERole.Student, false)) {
@@ -504,7 +558,12 @@ public class GradeReviewController {
     // TODO Testing
     @DeleteMapping("/student-comment/delete")
     public ResponseEntity<?> deleteStudentDeleteComment(HttpServletRequest httpServletRequest,
-                                                        @RequestBody DeleteStudentCommentRequest request) {
+                                                        @RequestBody @Valid DeleteStudentCommentRequest request,
+                                                        BindingResult result) {
+        if (result.hasErrors()) {
+            return CommonResponse.buildError(result);
+        }
+
         var user = AuthenticationUtils.appUserDetails().unwrap();
         var currentUser = jwtUtils.getUserNameFromRequest(httpServletRequest);
         if (!validateGradeReviewOfUser(currentUser, request, ERole.Student, false)) {

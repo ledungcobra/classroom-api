@@ -3,12 +3,15 @@ package com.ledungcobra.dto.gradereview.postApproveGradeReview;
 import com.ledungcobra.dto.gradereview.GradeReviewValidatorArgs;
 import lombok.*;
 
+import javax.validation.constraints.NotNull;
 import java.io.Serializable;
 
 @EqualsAndHashCode(callSuper = true)
 @Data
 @NoArgsConstructor
 public class ApprovalGradeReviewRequest extends GradeReviewValidatorArgs implements Serializable{
+
+    @NotNull
     private Byte approvalStatus;
 
     @Builder

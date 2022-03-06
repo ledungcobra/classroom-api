@@ -49,4 +49,8 @@ public class WsMessageController extends BaseWebSocketController{
         sendMessageToClient(id, objectMapper.writeValueAsString(response));
     }
 
+    @Override
+    protected String getChannel() {
+        return MESSAGES;
+    }
 }

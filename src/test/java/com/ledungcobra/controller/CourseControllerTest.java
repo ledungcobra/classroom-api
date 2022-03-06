@@ -4,7 +4,9 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ledungcobra.common.*;
 import com.ledungcobra.configuration.security.jwt.JwtUtils;
+import com.ledungcobra.configuration.websocket.WsNotificationController;
 import com.ledungcobra.course.entity.Grade;
+import com.ledungcobra.course.entity.Notification;
 import com.ledungcobra.course.entity.Student;
 import com.ledungcobra.course.repository.AssignmentRepository;
 import com.ledungcobra.course.repository.GradeRepository;
@@ -16,15 +18,16 @@ import com.ledungcobra.dto.course.getAllGrades.GradeResponseWrapper;
 import com.ledungcobra.dto.course.getAllGradesV2.GradeOfAssignmentResponse;
 import com.ledungcobra.dto.course.getAssignmentsOfCourse.AssignmentResponse;
 import com.ledungcobra.dto.course.getAssignmentsOfCourse.AssignmentWrapper;
+import com.ledungcobra.dto.course.getCourseById.CourseWrapperResponse;
 import com.ledungcobra.dto.course.getGradeByStudent.SingleStudentGradeResponse;
 import com.ledungcobra.dto.course.getMembersInCourse.MemberCourseResponse;
-import com.ledungcobra.dto.course.getCourseById.CourseResponse;
 import com.ledungcobra.dto.course.index.CourseListWrapper;
 import com.ledungcobra.dto.course.postCreateCourse.CreateCourseRequest;
 import com.ledungcobra.dto.course.postSortAssignment.AssignmentSimple;
 import com.ledungcobra.dto.course.postSortAssignment.SortAssignmentRequest;
 import com.ledungcobra.dto.course.postUpdateAssignmentNormal.UpdateGradeNormalRequest;
 import com.ledungcobra.dto.course.postUpdateAssignmentNormal.UpdateGradeSpecificRequestBase;
+import com.ledungcobra.dto.course.removeMember.RemoveMemberInCourseRequest;
 import com.ledungcobra.dto.course.updateAssigment.UpdateAssignmentsRequest;
 import com.ledungcobra.dto.email.postSendMail.SendMailJoinToCourseRequest;
 import lombok.SneakyThrows;
@@ -34,6 +37,7 @@ import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MvcResult;
@@ -44,6 +48,9 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.Mockito.doNothing;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -67,6 +74,8 @@ public class CourseControllerTest extends BaseTest {
     @Autowired
     private NotificationRepository notificationRepository;
 
+    @MockBean
+    private WsNotificationController wsNotificationController;
 
     public static final UpdateAssignmentsRequest updateAssignmentsRequest_Success = UpdateAssignmentsRequest.builder()
             .name("name")
@@ -120,12 +129,12 @@ public class CourseControllerTest extends BaseTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .headers(jwtUtils.buildAuthorizationHeader("tanhank2k"))
         ).andDo(print()).andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
-        var response = objectMapper.readValue(result, new TypeReference<CommonResponse<CourseResponse>>() {
+        var response = objectMapper.readValue(result, new TypeReference<CommonResponse<CourseWrapperResponse>>() {
         });
         assertThat(response).isNotNull();
         assertThat(response.getStatus()).isEqualTo(EStatus.Success.getValue());
         assertThat(response.getResult()).isEqualTo(EResult.Successful.getValue());
-        var course = response.getContent();
+        var course = response.getContent().getCourse();
         assertThat(course).isNotNull();
         assertThat(course.getId()).isEqualTo(1);
         assertThat(course.getClassCode()).isNotNull().isNotBlank();
@@ -373,10 +382,14 @@ public class CourseControllerTest extends BaseTest {
         return jwtUtils.buildAuthorizationHeader("tanhank2k");
     }
 
+
     @SneakyThrows
     @Test
     void postUpdateAssignmentNormal() {
         var countNotification = notificationRepository.count();
+        doNothing().when(wsNotificationController).sendNotification(anyList());
+        doNothing().when(wsNotificationController).sendNotification(any(Notification.class));
+
         var scores = List.of(
                 UpdateGradeSpecificRequestBase.builder()
                         .grade(10)
@@ -414,6 +427,9 @@ public class CourseControllerTest extends BaseTest {
     @SneakyThrows
     void testPostUpdateGradeFinalized() {
         var notificationCount = notificationRepository.count();
+        doNothing().when(wsNotificationController).sendNotification(anyList());
+        doNothing().when(wsNotificationController).sendNotification(any(Notification.class));
+
         MvcResult result = mockMvc.perform(post("/course/1/assignments/1/update-grade-finalized")
                         .headers(getAuthHeader())
                         .contentType(MediaType.APPLICATION_JSON)
@@ -434,6 +450,23 @@ public class CourseControllerTest extends BaseTest {
         assertThat(res.getResult()).isEqualTo(EResult.Successful.getValue());
         assertThat(res.getContent()).isTrue();
         assertThat(notificationRepository.count()).isEqualTo(notificationCount + 1);
+    }
+
+    @Test
+    @SneakyThrows
+    void removeMember() {
+        mockMvc.perform(
+                        post("/course/remove-member")
+                                .headers(jwtUtils.buildAuthorizationHeader(testUser))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(RemoveMemberInCourseRequest.builder()
+                                        .currentUser(testUser)
+                                        .courseId(1)
+                                        .studentId("4")
+                                        .build()))
+                )
+                .andExpect(status().isOk())
+        ;
     }
 
     @Test

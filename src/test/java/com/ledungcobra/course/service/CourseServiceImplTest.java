@@ -382,7 +382,7 @@ class CourseServiceImplTest {
         assertThat(first.getProfileImageUrl()).isNull();
         assertThat(first.getPersonalEmail()).isEqualTo("string");
         assertThat(first.getStudentID()).isEqualTo("1");
-        assertThat(first.getUserStatus()).isEqualTo(EUserStatus.Active);
+        assertThat(first.getUserStatus()).isEqualTo(EUserStatus.Active.getValue());
         assertThat(first.getFullname()).isEqualTo("BÙI TẤN HẠNH");
 
     }

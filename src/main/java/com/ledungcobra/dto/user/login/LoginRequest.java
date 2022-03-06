@@ -10,7 +10,7 @@ import javax.validation.constraints.NotNull;
 
 import java.io.Serializable;
 
-import static com.ledungcobra.dto.user.login.ValidatorConstants.*;
+import static com.ledungcobra.dto.ValidatorConstants.*;
 
 @Data
 @NoArgsConstructor

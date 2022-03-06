@@ -78,7 +78,11 @@ public class AdminController {
 
         var exist = userService.checkExists(request.getUsername());
         if (exist) {
-            return ok(CommonResponse.builder().message("User already exist").content("").status(EStatus.Error).result(EResult.Error).build());
+            return ok(CommonResponse.builder().message("User already exist")
+                    .content("")
+                    .status(EStatus.Error)
+                    .result(EResult.Error)
+                    .build());
         }
         var newUser = userService.register(RegisterUserDto.builder().firstName(request.getFirstName()).middleName(request.getMiddleName()).lastName(request.getLastName()).email(request.getEmail()).phoneNumber(request.getPhoneNumber()).password(request.getPassword()).username(request.getUsername()).imageUrl("").build(), ERoleAccount.Admin);
         var token = jwtUtils.generateToken(new AppUserDetails(newUser));

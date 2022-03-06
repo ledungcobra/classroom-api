@@ -6,6 +6,8 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
+import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.NotNull;
 import java.io.Serializable;
 
 @EqualsAndHashCode(callSuper = true)
@@ -13,7 +15,11 @@ import java.io.Serializable;
 @NoArgsConstructor
 public class UpdateCommentRequest extends GradeReviewValidatorArgs implements Serializable {
 
+    @NotNull
+    @NotBlank
     private String message;
+
+    @NotNull
     private  Integer reviewCommentId;
 
     @Builder

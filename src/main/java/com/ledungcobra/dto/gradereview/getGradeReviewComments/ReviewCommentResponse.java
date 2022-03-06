@@ -15,6 +15,7 @@ import java.io.Serializable;
 @AllArgsConstructor
 @Builder
 public class ReviewCommentResponse implements Serializable {
+
     private Integer id;
     private String message;
     private Integer studentId;

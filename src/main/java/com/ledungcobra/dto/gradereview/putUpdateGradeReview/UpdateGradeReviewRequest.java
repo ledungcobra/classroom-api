@@ -3,6 +3,8 @@ package com.ledungcobra.dto.gradereview.putUpdateGradeReview;
 import com.ledungcobra.dto.gradereview.GradeReviewValidatorArgs;
 import lombok.*;
 
+import javax.annotation.Nonnegative;
+import javax.validation.constraints.NotNull;
 import java.io.Serializable;
 
 @EqualsAndHashCode(callSuper = true)
@@ -10,7 +12,10 @@ import java.io.Serializable;
 @NoArgsConstructor
 public class UpdateGradeReviewRequest extends GradeReviewValidatorArgs implements Serializable {
 
+    @Nonnegative
     private Float gradeExpect;
+
+    @NotNull
     private String reason;
 
     @Builder

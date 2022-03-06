@@ -3,6 +3,8 @@ package com.ledungcobra.dto.gradereview.postTeacherComment;
 import com.ledungcobra.dto.gradereview.GradeReviewValidatorArgs;
 import lombok.*;
 
+import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.NotNull;
 import java.io.Serializable;
 
 @EqualsAndHashCode(callSuper = true)
@@ -11,6 +13,8 @@ import java.io.Serializable;
 @Builder
 public class CreateTeacherCommentRequest extends GradeReviewValidatorArgs implements Serializable {
 
+    @NotNull
+    @NotBlank
     private String message;
 
     @Builder
