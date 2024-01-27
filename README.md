@@ -4,7 +4,7 @@
  
  ## Video Demo: https://www.youtube.com/watch?v=SExU-R0iHBU,https://youtu.be/NNfhcEinUhc
 
- ## Tech stack
+ ## Technical stacks
 * ReactJS
 * Redux
 * Typescript
